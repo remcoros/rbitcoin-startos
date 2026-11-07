@@ -37,8 +37,8 @@ multi-platform digest. The upstream binaries, entrypoint, working directory, and
 non-root UID/GID `10001:10001` are preserved on x86_64 and aarch64.
 
 The single subcontainer is named `rbitcoin`; its daemon is `node`. Before every node
-start, the `nocow` oneshot runs as root and applies `chattr +C` to directories on both
-data volumes. It leaves regular files, symlinks, and special files alone. The node
+start, the `nocow` oneshot runs as root and applies `chattr +C` to directories on the
+main data volume. It leaves regular files, symlinks, and special files alone. The node
 waits for this step to succeed, then runs as the upstream image user. The package
 prepares writable volume roots and owner-only RPC credential files before launch.
 The generated runtime configuration is copied to `/etc/rbitcoin.conf` with mode
@@ -47,21 +47,17 @@ five minutes for archive flushing.
 
 ## Volume and Data Layout
 
-Three persistent volumes separate chain data, optional cold files, and private
-package configuration. Selecting a separate cold volume does not select a physical
-disk; storage placement remains an operator decision.
+Two persistent volumes separate node data from private package configuration.
 
 | Volume | Container mount | Contents |
 | --- | --- | --- |
 | `main` | `/data` | `datadir/`: archive, indexes, mempool, peer records, RPC secrets, optional API log and AS map |
-| `cold` | `/cold` | Optional `store/` append-only files when separate cold storage is enabled |
 | `startos` | Unmounted | `rbitcoin.conf` and `store.json`, protected by a mode `0700` volume root |
 
-The node always uses mainnet and `/data/datadir`. Cold-file placement cannot change
-through actions once `datadir/store` exists. The package does not relocate or delete
-existing chain data.
+The node always uses mainnet and `/data/datadir`, with all node data in the main
+volume.
 
-Directories on both data volumes receive the Btrfs no-copy-on-write attribute so
+Directories on the main data volume receive the Btrfs no-copy-on-write attribute so
 new files inherit it. This does not rewrite existing CoW extents or convert an
 already populated data store.
 
@@ -73,7 +69,7 @@ separate JSON model. Init merges missing defaults on install, update, and restor
 | Model | Purpose | Writers |
 | --- | --- | --- |
 | `startos/rbitcoin.conf` | Upstream snake_case settings, including repeatable peer and permission keys | Configuration actions |
-| `startos/store.json` | RPC credentials, cold-volume selection, and I/O selection | Credential and performance actions |
+| `startos/store.json` | RPC credentials and I/O selection | Credential and performance actions |
 
 The custom conf parser preserves repeated list keys without INI quoting. The writer
 omits unset optional settings and rejects embedded line breaks. Loose schemas retain
@@ -122,7 +118,7 @@ domains, and onion addresses are selected by the operator per interface.
 Init seeds upstream defaults and private package state. This package supports
 mainnet only; optional APIs, indexes, pruning, and metrics start disabled.
 
-Before the first start, configure pruning, indexes, and storage layout. Enabling
+Before the first start, configure pruning and indexes. Enabling
 TCP RPC without credentials raises a critical credential task. Its action generates
 and stores a random password and separate Bearer token. On the next node start,
 the package writes the exact upstream token and `username:password` cookie formats
@@ -131,9 +127,9 @@ with owner-only permissions. The fixed Basic username is `rbitcoin`.
 ## Actions
 
 Actions are grouped into **Chain and storage**, **Peers and privacy**, **Clients and
-mining**, **Policy and performance**, and **Status and logs**. StartOS determines their
-display order; numeric prefixes are not used. Configuration changes restart a running
-node and are safe to repeat with the same values, except that enabling pruning can
+mining**, and **Policy and performance**. Logging is listed separately. StartOS
+determines their display order; numeric prefixes are not used. Configuration changes
+restart a running node and are safe to repeat with the same values, except that enabling pruning can
 permanently remove historical witness data and enabling indexes can require
 substantial work.
 
@@ -147,18 +143,12 @@ substantial work.
 | `permissions` | IP/CIDR permission grants for specific peers. An empty list means no grants. |
 | `apis` | Optional RPC, Electrum, Esplora, Core REST, metrics, concurrency, subscription and address-history limits. Enabling an API adds its interface; disabling it removes it. |
 | `mining` | Minimum template fee, optional Esplora templates, and Stratum v2. The template fee defaults to 0.00000001 BTC/kvB. Enabling Stratum v2 reveals its required authority key; disabling it retains that key. |
-| `performance` | Optional separate cold volume and I/O backend. Automatic I/O leaves `RBITCOIN_IO` unset. Cold placement is fixed once data exists; worker counts, head sizing, queue budgets, and stall handling use upstream defaults. |
+| `performance` | I/O backend. Automatic I/O leaves `RBITCOIN_IO` unset. Worker counts, head sizing, queue budgets, and stall handling use upstream defaults. |
 | `logging` | Log level and optional API call log. API logging records wallet requests and has no package-provided rotation. |
 | `set-rpc-credentials` | Generates and returns a password and separate Bearer token. Repeated use replaces both and restarts a running node; all RPC clients must be updated. The action warns before rotation. |
-| `status` | Reads the node's progress endpoint while running; does not modify configuration or chain data. |
 
 All visible wrapper strings are translated into Spanish, German, Polish, and French.
-Technical protocol names and selectable enum tokens retain their values. Node status
-maps the pinned release's phases and known progress stages to short translated labels;
-it omits an unknown operation instead of showing an internal stage name. Percentages
-and counters describe the current task, not overall chain synchronization. The raw
-`/progress` endpoint and logs retain upstream's terms. During ordinary IBD the endpoint
-may provide only the `catch-up` phase, without block counts or a sync percentage.
+Technical protocol names and selectable enum tokens retain their values.
 
 ## Tasks
 
@@ -177,26 +167,25 @@ use the health listener, which upstream starts before opening the store.
   reports client readiness without a redundant success message. HTTP 503 reports
   loading with a translated reason for opening, starting, syncing, indexing, stopping,
   a stale tip, block/index lag, or busy probes. Unknown reasons use **Not ready**.
-  Other HTTP failures or connection errors report failure. `status` shows the current
-  phase and any task progress available from `/progress`.
+  Other HTTP failures or connection errors report failure.
 
 The checks inspect HTTP status codes; a generic any-response probe is insufficient.
 
 ## Backups and Restore
 
-Backups include configuration, credentials, and the complete node data. Main and cold
-volumes use incremental sync; StartOS stops the service during backup and restores all
-three volumes before init merges defaults. No archive is intentionally omitted.
+Backups include configuration, credentials, and the complete node data. The main
+volume uses incremental sync; StartOS stops the service during backup and restores
+both volumes before init merges defaults. No archive is intentionally omitted.
 
-Expect a chain-sized backup and sufficient space on the backup target. Restoring only
-one data volume from a split layout is not a supported restore. The runtime conf copy
-is recreated on startup from the persistent model.
+Expect a chain-sized backup and sufficient space on the backup target. The runtime
+conf copy is recreated on startup from the persistent model.
 
 ## Limitations and Differences
 
 The wrapper preserves upstream defaults except for fixed StartOS data paths, bind
-addresses, mainnet-only operation, an always-on health listener, no-copy-on-write data volumes, and the
-shutdown allowance. Changing an optional setting is an explicit operator choice.
+addresses, mainnet-only operation, an always-on health listener, a no-copy-on-write
+data volume, and the shutdown allowance. Changing an optional setting is an explicit
+operator choice.
 
 - Optional APIs and indexes are initially disabled. There is no graphical wallet or
   block explorer frontend, no wallet/private-key RPC, and no complete Bitcoin Core RPC
@@ -212,8 +201,6 @@ shutdown allowance. Changing an optional setting is an explicit operator choice.
 - Network selection, consensus overrides, unstable environment tuning, protocol
   timing, broad peer trust, and custom AS-map paths are not exposed. These use the
   pinned upstream defaults. API disk-read concurrency uses 0 for automatic sizing.
-- Separate cold storage is a volume boundary, not an automatic disk migration. Pruning
-  and cold-file placement have the restrictions described above.
 - A successful package build does not establish runtime, IBD, client, restart, or backup
   compatibility on a StartOS server.
 
@@ -230,7 +217,6 @@ architectures: [x86_64, aarch64]
 subcontainers: [rbitcoin]
 volumes:
   main: /data
-  cold: /cold
   startos: unmounted
 file_models:
   - startos/rbitcoin.conf
@@ -247,7 +233,6 @@ interfaces:
   sv2: { type: api, port: 8442 }
 actions:
   - set-rpc-credentials
-  - status
   - indexes
   - storage
   - peers

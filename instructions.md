@@ -17,17 +17,16 @@ APIs, indexes, pruning, and metrics start disabled. There is no web frontend.
 Mainnet needs substantial disk space and an initial sync.
 
 1. Choose your pruning policy in **Storage and pruning** before syncing.
-2. For a separate cold volume, enable it in **Performance** before the first start.
-   This choice is permanent once the data store exists and does not select a disk.
-   Leave the I/O backend on **Automatic** unless you need an override.
-3. Choose your **Indexes**. Wallet history in Electrum and Esplora needs the address
+2. Choose your **Indexes**. Wallet history in Electrum and Esplora needs the address
    history index. Enable compact block filters or the Silent Payment index if your
    client needs them. Indexes need extra disk space and time to build.
-4. Enable interfaces in **Client APIs**. For RPC, run **Generate RPC credentials**
+3. Enable interfaces in **Client APIs**. For RPC, run **Generate RPC credentials**
    and save the password or Bearer token for your clients.
-5. Start the node. **Node status** shows the current state and any available task
-   progress. Task percentages cover that task only. A sync percentage is not always
-   available. Electrum, Esplora, and RPC become available after catch-up and indexing.
+4. Start the node. Wait for the **Readiness** health check to pass before connecting
+   clients.
+
+Leave **Disk I/O backend** on **Automatic** in **Performance** unless you need an
+override.
 
 ## Using rbitcoin
 
@@ -72,5 +71,5 @@ or native Tor-control/inbound-I2P forwarding. Outbound proxies and SAM endpoints
 already exist and be reachable. Peer permission grants refer to the address the node
 actually sees, which may be a gateway/proxy address for forwarded connections.
 
-Backups include the entire chain and every index, including a separate cold volume
-when selected. Allow enough backup space for the full node data.
+Backups include the entire chain and every index. Allow enough backup space for the
+full node data.

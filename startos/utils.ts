@@ -194,21 +194,6 @@ export async function validateConfig(next: NodeConfig): Promise<void> {
   }
 }
 
-export async function validatePerformance(
-  next: Store,
-  current: Store,
-): Promise<void> {
-  if (
-    next.splitCold !== current.splitCold &&
-    (await exists(sdk.volumes.main.subpath('datadir/store')))
-  )
-    throw new Error(
-      i18n(
-        'Cold-file placement cannot change after the data store is created.',
-      ),
-    )
-}
-
 export function processEnvironment(store: Store): Record<string, string> {
   const env: Record<string, string> = {}
   if (store.ioBackend !== 'auto') env.RBITCOIN_IO = store.ioBackend
@@ -224,7 +209,7 @@ export function runtimeConfig(config: NodeConfig): string {
   return serializeConfig(configShape.parse(supported))
 }
 
-export function nodeArguments(config: NodeConfig, store: Store): string[] {
+export function nodeArguments(config: NodeConfig): string[] {
   const args = [
     '--conf',
     '/etc/rbitcoin.conf',
@@ -235,7 +220,6 @@ export function nodeArguments(config: NodeConfig, store: Store): string[] {
     '--health-listen',
     '0.0.0.0:9332',
   ]
-  if (store.splitCold) args.push('--datadir-cold', '/cold')
   if (config.rpc_listen)
     args.push(
       '--rpc-token-file',
@@ -276,44 +260,4 @@ export function readinessMessage(body: string): string {
       blocks: Number(index[1]),
     })
   return i18n('Not ready')
-}
-
-export function phaseLabel(phase: string): string {
-  switch (phase) {
-    case 'opening':
-      return i18n('Opening store')
-    case 'starting':
-      return i18n('Starting')
-    case 'catch-up':
-      return i18n('Syncing')
-    case 'indexing':
-      return i18n('Indexing')
-    case 'following':
-      return i18n('Following chain')
-    case 'stopping':
-      return i18n('Stopping')
-    default:
-      return i18n('Unknown')
-  }
-}
-
-export function stageLabel(stage: string | null): string | null {
-  switch (stage) {
-    case 'scripthash keys collect':
-    case 'scripthash keys merge':
-    case 'scripthash postings collect':
-    case 'scripthash pack':
-      return i18n('Building address index')
-    case 'blockfilter build':
-      return i18n('Building block filters')
-    case 'sp_tweaks build':
-      return i18n('Building Silent Payment index')
-    case 'input backfill':
-      return i18n('Updating input records')
-    case 'tx.head backfill':
-    case 'tx.head rebuild':
-      return i18n('Rebuilding transaction index')
-    default:
-      return null
-  }
 }

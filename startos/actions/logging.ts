@@ -12,7 +12,7 @@ export const logging = sdk.Action.withInput(
     description: i18n('Saving restarts a running node.'),
     warning: null,
     allowedStatuses: 'any',
-    group: i18n('Status and logs'),
+    group: null,
     visibility: 'enabled',
   },
   InputSpec.of({

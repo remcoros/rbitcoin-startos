@@ -10,7 +10,7 @@ export const manifest = setupManifest({
   marketingUrl: 'https://github.com/rbitcoin-org/rbitcoin',
   donationUrl: null,
   description: { short, long },
-  volumes: ['main', 'cold', 'startos'],
+  volumes: ['main', 'startos'],
   images: {
     rbitcoin: {
       source: {

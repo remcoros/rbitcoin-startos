@@ -10,7 +10,6 @@ import { mining } from './mining'
 import { performance } from './performance'
 import { logging } from './logging'
 import { setRpcCredentials } from './setRpcCredentials'
-import { status } from './status'
 
 export const actions = sdk.Actions.of()
   .addAction(indexes)
@@ -23,5 +22,4 @@ export const actions = sdk.Actions.of()
   .addAction(mining)
   .addAction(mempool)
   .addAction(performance)
-  .addAction(status)
   .addAction(logging)

@@ -19,10 +19,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   if (config.rpc_listen && (!store.rpcPassword || !store.rpcToken))
     throw new Error(i18n('Generate RPC credentials first.'))
   await validateConfig(config)
-  for (const volume of [sdk.volumes.main, sdk.volumes.cold]) {
-    await fs.mkdir(volume.path, { recursive: true })
-    await fs.chown(volume.path, 10001, 10001)
-  }
+  await fs.mkdir(sdk.volumes.main.path, { recursive: true })
+  await fs.chown(sdk.volumes.main.path, 10001, 10001)
   const datadir = sdk.volumes.main.subpath('datadir')
   await fs.mkdir(datadir, { recursive: true, mode: 0o700 })
   await fs.chown(datadir, 10001, 10001)
@@ -37,19 +35,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
       await fs.chown(path, 10001, 10001)
     }
   }
-  const mounts = sdk.Mounts.of()
-    .mountVolume({
-      volumeId: 'main',
-      subpath: null,
-      mountpoint: '/data',
-      readonly: false,
-    })
-    .mountVolume({
-      volumeId: 'cold',
-      subpath: null,
-      mountpoint: '/cold',
-      readonly: false,
-    })
+  const mounts = sdk.Mounts.of().mountVolume({
+    volumeId: 'main',
+    subpath: null,
+    mountpoint: '/data',
+    readonly: false,
+  })
   const sub = sdk.SubContainer.of(
     effects,
     { imageId: 'rbitcoin' },
@@ -68,7 +59,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
         command: [
           'find',
           '/data',
-          '/cold',
           '-type',
           'd',
           '-exec',
@@ -84,7 +74,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     .addDaemon('node', {
       subcontainer: sub,
       exec: {
-        command: sdk.useEntrypoint(nodeArguments(config, store)),
+        command: sdk.useEntrypoint(nodeArguments(config)),
         env: processEnvironment(store),
         sigtermTimeout: 300_000,
       },
