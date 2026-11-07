@@ -9,15 +9,15 @@ export const peers = sdk.Action.withInput(
   'peers',
   {
     name: i18n('Peers'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Manage peer connections and discovery.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Peers and privacy'),
     visibility: 'enabled',
   },
   InputSpec.of({
     listen: Value.toggle({
-      name: i18n('Accept incoming P2P connections'),
+      name: i18n('Incoming P2P'),
       default: true,
     }),
     max_outbound: Value.number({
@@ -29,7 +29,7 @@ export const peers = sdk.Action.withInput(
       integer: true,
     }),
     max_inbound: Value.number({
-      name: i18n('Maximum inbound peers (0: none)'),
+      name: i18n('Maximum inbound peers'),
       required: true,
       default: 200,
       min: 0,
@@ -53,7 +53,7 @@ export const peers = sdk.Action.withInput(
       default: false,
     }),
     no_discover: Value.toggle({
-      name: i18n('Disable local address discovery and announcement'),
+      name: i18n('Disable address discovery'),
       default: false,
     }),
     external_ip: Value.list(

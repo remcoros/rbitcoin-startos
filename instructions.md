@@ -1,12 +1,5 @@
 # rbitcoin
 
-## Documentation
-
-- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
-- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
-- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/rpc.md) — supported methods and authentication.
-- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/COMPAT.md) — supported wallet and API behavior.
-
 ## What you get on StartOS
 
 This package runs on mainnet with optional JSON-RPC, Electrum, Esplora, and Stratum v2 interfaces.
@@ -32,8 +25,9 @@ override.
 
 Use the **JSON-RPC** address with HTTP Basic authentication, username `rbitcoin`, and
 the generated password. For Bearer authentication, send the separate token in the
-`Authorization: Bearer` header. **Generate RPC credentials** replaces both secrets
-and restarts a running node. Update every RPC client afterward.
+`Authorization: Bearer` header. **View RPC credentials** shows the saved credentials.
+**Replace RPC credentials** replaces both secrets and restarts a running node.
+Update every RPC client afterward.
 
 Use **Electrum** for compatible wallets. Use a `tcp://` address for plaintext or an
 `ssl://` address for the StartOS TLS connection. Wallet address history needs the
@@ -50,8 +44,9 @@ provider. Generate or supply a valid authority key before enabling it. The provi
 uses Noise encryption; miners need its matching authority public key from the node
 logs.
 
-Settings are prefilled with upstream defaults. Proxies start **Disabled** and peer
+Settings show saved values. Proxies start **Disabled** and peer
 networks use **All available**. Enter an endpoint only when enabling a proxy.
+Use **API limits** for advanced client limits. Fees use sat/vB; the witness cache uses MiB.
 Saving settings restarts a running node. API call logging includes wallet requests
 and has no size limit.
 
@@ -73,3 +68,10 @@ actually sees, which may be a gateway/proxy address for forwarded connections.
 
 Backups include the entire chain and every index. Allow enough backup space for the
 full node data.
+
+## Documentation
+
+- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
+- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
+- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/rpc.md) — supported methods and authentication.
+- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/COMPAT.md) — supported wallet and API behavior.

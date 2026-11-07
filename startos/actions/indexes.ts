@@ -2,55 +2,72 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { validateConfig } from '../utils'
+import { exists, validateConfig } from '../utils'
 
-const { InputSpec, Value } = sdk
+const { InputSpec, Value, Variants } = sdk
 export const indexes = sdk.Action.withInput(
   'indexes',
   {
     name: i18n('Indexes'),
-    description: i18n(
-      'Indexes need extra disk space and time to build. Saving restarts a running node.',
-    ),
-    warning: null,
+    description: i18n('Choose which indexes to build.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Chain and storage'),
     visibility: 'enabled',
   },
-  InputSpec.of({
-    sh_index: Value.toggle({
-      name: i18n('Address history index'),
-      description: i18n(
-        'Wallet history in Electrum and Esplora needs this index.',
-      ),
-      default: false,
-    }),
-    block_filter_index: Value.toggle({
-      name: i18n('Compact block filters (BIP158)'),
-      default: false,
-    }),
-    sp_tweaks: Value.toggle({
-      name: i18n('Silent Payment index'),
-      description: i18n('Requires pruning off.'),
-      default: false,
-    }),
-    sp_tweaks_dust: Value.number({
-      name: i18n('Silent Payment output cutoff (satoshis; 0: all)'),
-      required: true,
-      default: 1000,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
-  }),
+  async () => {
+    const config = await nodeConfig.read().once()
+    const pruned =
+      config?.prune_seqsigwit ||
+      (await exists(sdk.volumes.main.subpath('datadir/store/seqsigwit.prune')))
+    return InputSpec.of({
+      sh_index: Value.toggle({
+        name: i18n('Address history index'),
+        description: i18n('For Electrum and Esplora wallet history.'),
+        default: false,
+      }),
+      block_filter_index: Value.toggle({
+        name: i18n('Compact block filters (BIP158)'),
+        default: false,
+      }),
+      silentPayments: Value.dynamicUnion(() => ({
+        name: i18n('Silent Payment index'),
+        default: 'disabled',
+        description: i18n('Requires pruning off.'),
+        disabled: pruned ? ['enabled'] : false,
+        variants: Variants.of({
+          disabled: { name: i18n('Disabled'), spec: InputSpec.of({}) },
+          enabled: {
+            name: i18n('Enabled'),
+            spec: InputSpec.of({
+              cutoff: Value.number({
+                name: i18n('Output cutoff'),
+                units: 'sats',
+                description: i18n('0 includes all outputs.'),
+                required: true,
+                default: 1000,
+                min: 0,
+                max: 4294967295,
+                integer: true,
+              }),
+            }),
+          },
+        }),
+      })),
+    })
+  },
   async () => {
     const value = await nodeConfig.read().once()
     if (!value) return {}
     return {
       sh_index: value.sh_index,
       block_filter_index: value.block_filter_index,
-      sp_tweaks: value.sp_tweaks,
-      sp_tweaks_dust: value.sp_tweaks_dust,
+      silentPayments: value.sp_tweaks
+        ? {
+            selection: 'enabled' as const,
+            value: { cutoff: value.sp_tweaks_dust },
+          }
+        : { selection: 'disabled' as const, value: {} },
     }
   },
   async ({ effects, input }) => {
@@ -60,8 +77,11 @@ export const indexes = sdk.Action.withInput(
         ...current,
         sh_index: input.sh_index,
         block_filter_index: input.block_filter_index,
-        sp_tweaks: input.sp_tweaks,
-        sp_tweaks_dust: input.sp_tweaks_dust,
+        sp_tweaks: input.silentPayments.selection === 'enabled',
+        sp_tweaks_dust:
+          input.silentPayments.selection === 'enabled'
+            ? input.silentPayments.value.cutoff
+            : current.sp_tweaks_dust,
       }
       await validateConfig(next)
       return next

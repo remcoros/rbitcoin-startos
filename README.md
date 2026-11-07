@@ -127,7 +127,7 @@ with owner-only permissions. The fixed Basic username is `rbitcoin`.
 ## Actions
 
 Actions are grouped into **Chain and storage**, **Peers and privacy**, **Clients and
-mining**, and **Policy and performance**. Logging is listed separately. StartOS
+mining**, and **Policy and performance**. Logging is grouped with policy and performance. StartOS
 determines their display order; numeric prefixes are not used. Configuration changes
 restart a running node and are safe to repeat with the same values, except that enabling pruning can
 permanently remove historical witness data and enabling indexes can require
@@ -135,17 +135,19 @@ substantial work.
 
 | Action ID | Purpose and cost |
 | --- | --- |
-| `indexes` | Address history, compact block filters, then Silent Payment tweaks and output threshold. Each index uses additional storage and may backfill after synchronization. |
-| `storage` | Witness pruning, pruned-window RAM cache, and HDD scheduling. Disabling pruning is rejected after a prune marker exists; pruning and Silent Payment tweaks are mutually exclusive. |
+| `indexes` | Address history, compact block filters, then Silent Payment tweaks with a conditional output threshold. Silent Payments is disabled while pruning is enabled or a prune marker exists. Each index uses additional storage and may backfill after synchronization. |
+| `storage` | Witness pruning, a conditional RAM cache in MiB, and HDD scheduling. Pruning warns before selection; its Disabled option is unavailable after a prune marker exists; pruning and Silent Payment tweaks are mutually exclusive. |
 | `peers` | Listening, connection counts, pinned peers, seeds, and address advertisement. |
 | `privacy` | SOCKS proxies, peer network selection, external I2P SAM, and CJDNS reachability. Proxies default to Disabled; peer networks default to All available. Endpoints must already be reachable from the service. |
-| `mempool` | Weight budget, expiry, persistence, blocks-only mode, and minimum relay fee. Defaults include 336 hours and 0.00000100 BTC/kvB. |
+| `mempool` | Weight budget, expiry, persistence, blocks-only mode, and minimum relay fee. The UI uses MWU, hours, and sat/vB; the relay fee defaults to 0.1 sat/vB. Configuration retains upstream units. |
 | `permissions` | IP/CIDR permission grants for specific peers. An empty list means no grants. |
-| `apis` | Optional RPC, Electrum, Esplora, Core REST, metrics, concurrency, subscription and address-history limits. Enabling an API adds its interface; disabling it removes it. |
-| `mining` | Minimum template fee, optional Esplora templates, and Stratum v2. The template fee defaults to 0.00000001 BTC/kvB. Enabling Stratum v2 reveals its required authority key; disabling it retains that key. |
+| `apis` | Optional RPC, Electrum, Esplora, and metrics. Core REST appears only under enabled RPC. Enabling an API adds its interface; disabling it removes it. |
+| `apis-limits` | Advanced API concurrency, subscription and history limits, shown only for enabled client APIs. RPC uses a positive count; disk reads offer Automatic or Custom. |
+| `mining` | Minimum template fee, optional Esplora templates, and Stratum v2. The template fee defaults to 0.001 sat/vB. Fee entry converts exactly to upstream BTC/kvB. Enabling Stratum v2 reveals its required authority key; disabling it retains that key. |
 | `performance` | I/O backend. Automatic I/O leaves `RBITCOIN_IO` unset. Worker counts, head sizing, queue budgets, and stall handling use upstream defaults. |
 | `logging` | Log level and optional API call log. API logging records wallet requests and has no package-provided rotation. |
-| `set-rpc-credentials` | Generates and returns a password and separate Bearer token. Repeated use replaces both and restarts a running node; all RPC clients must be updated. The action warns before rotation. |
+| `view-rpc-credentials` | Returns saved credentials without changing them; disabled until both exist. |
+| `set-rpc-credentials` | Displays Generate or Replace according to stored credentials. Generates and returns a password and separate Bearer token. Repeated use replaces both and restarts a running node; all RPC clients must be updated. The action warns before rotation. |
 
 All visible wrapper strings are translated into Spanish, German, Polish, and French.
 Technical protocol names and selectable enum tokens retain their values.
@@ -167,7 +169,7 @@ use the health listener, which upstream starts before opening the store.
   reports client readiness without a redundant success message. HTTP 503 reports
   loading with a translated reason for opening, starting, syncing, indexing, stopping,
   a stale tip, block/index lag, or busy probes. Unknown reasons use **Not ready**.
-  Other HTTP failures or connection errors report failure.
+  Busy, stale-tip, or unknown readiness reasons persisting for five minutes report failure with a peer/log recovery hint. A changed reason resets that grace period. Other HTTP failures or connection errors report failure.
 
 The checks inspect HTTP status codes; a generic any-response probe is insufficient.
 
@@ -200,7 +202,7 @@ operator choice.
   cookie permission widening is unnecessary because the package owns the credentials.
 - Network selection, consensus overrides, unstable environment tuning, protocol
   timing, broad peer trust, and custom AS-map paths are not exposed. These use the
-  pinned upstream defaults. API disk-read concurrency uses 0 for automatic sizing.
+  pinned upstream defaults. API disk-read concurrency offers Automatic (stored as 0) or a positive custom count. Automatic uses one read on HDD, otherwise CPU count minus one, with a minimum of one. The RPC form shows the effective count: upstream’s 0 alias is displayed as 16.
 - A successful package build does not establish runtime, IBD, client, restart, or backup
   compatibility on a StartOS server.
 
@@ -233,6 +235,8 @@ interfaces:
   sv2: { type: api, port: 8442 }
 actions:
   - set-rpc-credentials
+  - view-rpc-credentials
+  - apis-limits
   - indexes
   - storage
   - peers

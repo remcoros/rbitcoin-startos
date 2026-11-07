@@ -7,8 +7,8 @@ export const performance = sdk.Action.withInput(
   'performance',
   {
     name: i18n('Performance'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Choose the disk I/O backend.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Policy and performance'),
     visibility: 'enabled',
@@ -16,6 +16,7 @@ export const performance = sdk.Action.withInput(
   InputSpec.of({
     ioBackend: Value.select({
       name: i18n('Disk I/O backend'),
+      description: i18n('Leave on Automatic unless troubleshooting.'),
       default: 'auto',
       values: {
         auto: i18n('Automatic'),

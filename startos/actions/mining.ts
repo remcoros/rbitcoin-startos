@@ -2,15 +2,15 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { validateConfig } from '../utils'
+import { feeToInput, feeFromSatVb, validateConfig } from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 export const mining = sdk.Action.withInput(
   'mining',
   {
     name: i18n('Mining'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Configure block templates and Stratum v2.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Clients and mining'),
     visibility: 'enabled',
@@ -19,14 +19,17 @@ export const mining = sdk.Action.withInput(
     const config = await nodeConfig.read().once()
     return InputSpec.of({
       esplora_block_template: Value.toggle({
-        name: i18n('Serve block templates through Esplora'),
+        name: i18n('Esplora block templates'),
         default: false,
       }),
-      block_min_tx_fee: Value.text({
-        name: i18n('Minimum template fee (BTC per kvB)'),
+      block_min_tx_fee: Value.number({
+        name: i18n('Minimum template fee'),
+        units: 'sat/vB',
+        min: 0,
+        step: 0.001,
+        integer: false,
         required: true,
-        default: '0.00000001',
-        masked: false,
+        default: 0.001,
       }),
       sv2: Value.union({
         name: i18n('Stratum v2 template provider'),
@@ -37,7 +40,8 @@ export const mining = sdk.Action.withInput(
             name: i18n('Enabled'),
             spec: InputSpec.of({
               authority: Value.text({
-                name: i18n('Stratum v2 authority secret (64 hex characters)'),
+                name: i18n('Authority secret'),
+                description: i18n('64 hex characters.'),
                 required: true,
                 default: config?.sv2_tp_authority_sec ?? null,
                 masked: true,
@@ -54,7 +58,7 @@ export const mining = sdk.Action.withInput(
     if (!value) return {}
     return {
       esplora_block_template: value.esplora_block_template,
-      block_min_tx_fee: value.block_min_tx_fee,
+      block_min_tx_fee: feeToInput(value.block_min_tx_fee),
       sv2: value.sv2_tp_listen
         ? {
             selection: 'enabled' as const,
@@ -69,7 +73,7 @@ export const mining = sdk.Action.withInput(
       const next: NodeConfig = {
         ...current,
         esplora_block_template: input.esplora_block_template,
-        block_min_tx_fee: input.block_min_tx_fee.trim(),
+        block_min_tx_fee: feeFromSatVb(input.block_min_tx_fee),
         sv2_tp_listen:
           input.sv2.selection === 'enabled' ? '0.0.0.0:8442' : null,
         sv2_tp_authority_sec:

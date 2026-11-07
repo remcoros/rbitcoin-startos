@@ -6,10 +6,11 @@ import { privacy } from './privacy'
 import { mempool } from './mempool'
 import { permissions } from './permissions'
 import { apis } from './apis'
+import { apiLimits } from './apiLimits'
 import { mining } from './mining'
 import { performance } from './performance'
 import { logging } from './logging'
-import { setRpcCredentials } from './setRpcCredentials'
+import { setRpcCredentials, viewRpcCredentials } from './setRpcCredentials'
 
 export const actions = sdk.Actions.of()
   .addAction(indexes)
@@ -18,7 +19,9 @@ export const actions = sdk.Actions.of()
   .addAction(privacy)
   .addAction(permissions)
   .addAction(apis)
+  .addAction(apiLimits)
   .addAction(setRpcCredentials)
+  .addAction(viewRpcCredentials)
   .addAction(mining)
   .addAction(mempool)
   .addAction(performance)

@@ -11,7 +11,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     {
       id: 'peer',
       name: i18n('P2P'),
-      description: '',
+      description: i18n('Incoming Bitcoin peer connections.'),
       enabled: config.listen !== '0' && config.max_inbound > 0,
       port: ports.peer,
       external: ports.peer,
@@ -23,7 +23,9 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     {
       id: 'rpc',
       name: i18n('JSON-RPC'),
-      description: i18n('Requires RPC credentials.'),
+      description: i18n(
+        'Username: rbitcoin. Use RPC password or Bearer token.',
+      ),
       enabled: !!config.rpc_listen,
       port: ports.rpc,
       external: ports.rpc,
@@ -35,7 +37,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     {
       id: 'electrum',
       name: i18n('Electrum'),
-      description: i18n('Wallet history needs the address history index.'),
+      description: i18n('Wallet connections. No authentication.'),
       enabled: !!config.electrum_listen,
       port: ports.electrum,
       external: ports.electrum,

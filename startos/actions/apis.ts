@@ -4,21 +4,34 @@ import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
 import { validateConfig } from '../utils'
 
-const { InputSpec, Value } = sdk
+const { InputSpec, Value, Variants } = sdk
 export const apis = sdk.Action.withInput(
   'apis',
   {
     name: i18n('Client APIs'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Enable RPC, wallet APIs, and metrics.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Clients and mining'),
     visibility: 'enabled',
   },
   InputSpec.of({
-    rpc_listen: Value.toggle({
+    rpc: Value.union({
       name: i18n('JSON-RPC'),
-      default: false,
+      default: 'disabled',
+      variants: Variants.of({
+        disabled: { name: i18n('Disabled'), spec: InputSpec.of({}) },
+        enabled: {
+          name: i18n('Enabled'),
+          spec: InputSpec.of({
+            rest: Value.toggle({
+              name: i18n('Core REST'),
+              description: i18n('No authentication.'),
+              default: false,
+            }),
+          }),
+        },
+      }),
     }),
     electrum_listen: Value.toggle({
       name: i18n('Electrum server'),
@@ -28,78 +41,18 @@ export const apis = sdk.Action.withInput(
       name: i18n('Esplora REST API'),
       default: false,
     }),
-    rest: Value.toggle({
-      name: i18n('Core REST (no authentication)'),
-      default: false,
-    }),
-    metrics: Value.toggle({
-      name: i18n('Prometheus metrics'),
-      default: false,
-    }),
-    rpc_work_queue: Value.number({
-      name: i18n('Concurrent RPC requests (0: default)'),
-      required: true,
-      default: 16,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
-    electrum_max_subs: Value.number({
-      name: i18n('Electrum subscriptions per connection'),
-      required: true,
-      default: 10000,
-      min: 1,
-      max: 4294967295,
-      integer: true,
-    }),
-    esplora_max_inflight: Value.number({
-      name: i18n('Concurrent Esplora requests'),
-      required: true,
-      default: 256,
-      min: 1,
-      max: 4294967295,
-      integer: true,
-    }),
-    max_sh_creates: Value.number({
-      name: i18n('Unpaged address history limit (outputs; 0: unlimited)'),
-      required: true,
-      default: 10000,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
-    heavy_sh_creates: Value.number({
-      name: i18n('Queue address-history queries above (outputs; 0: off)'),
-      required: true,
-      default: 10000,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
-    store_read_budget: Value.number({
-      name: i18n('Concurrent API disk reads (0: automatic)'),
-      required: true,
-      default: 0,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
+    metrics: Value.toggle({ name: i18n('Prometheus metrics'), default: false }),
   }),
   async () => {
     const value = await nodeConfig.read().once()
     if (!value) return {}
     return {
-      rpc_listen: value.rpc_listen !== null,
+      rpc: value.rpc_listen
+        ? { selection: 'enabled' as const, value: { rest: value.rest } }
+        : { selection: 'disabled' as const, value: {} },
       electrum_listen: value.electrum_listen !== null,
       esplora_listen: value.esplora_listen !== null,
-      rest: value.rest,
       metrics: value.metrics,
-      rpc_work_queue: value.rpc_work_queue,
-      electrum_max_subs: value.electrum_max_subs,
-      esplora_max_inflight: value.esplora_max_inflight,
-      max_sh_creates: value.max_sh_creates,
-      heavy_sh_creates: value.heavy_sh_creates,
-      store_read_budget: value.store_read_budget,
     }
   },
   async ({ effects, input }) => {
@@ -107,17 +60,11 @@ export const apis = sdk.Action.withInput(
       if (!current) throw new Error(i18n('Configuration is not initialized.'))
       const next: NodeConfig = {
         ...current,
-        rpc_listen: input.rpc_listen ? '0.0.0.0:8332' : null,
+        rpc_listen: input.rpc.selection === 'enabled' ? '0.0.0.0:8332' : null,
         electrum_listen: input.electrum_listen ? '0.0.0.0:50001' : null,
         esplora_listen: input.esplora_listen ? '0.0.0.0:3000' : null,
-        rest: input.rest,
+        rest: input.rpc.selection === 'enabled' && input.rpc.value.rest,
         metrics: input.metrics,
-        rpc_work_queue: input.rpc_work_queue,
-        electrum_max_subs: input.electrum_max_subs,
-        esplora_max_inflight: input.esplora_max_inflight,
-        max_sh_creates: input.max_sh_creates,
-        heavy_sh_creates: input.heavy_sh_creates,
-        store_read_budget: input.store_read_budget,
       }
       await validateConfig(next)
       return next

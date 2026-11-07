@@ -9,8 +9,8 @@ export const permissions = sdk.Action.withInput(
   'permissions',
   {
     name: i18n('Peer permissions'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Set permissions for trusted peers.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Peers and privacy'),
     visibility: 'enabled',
@@ -20,7 +20,9 @@ export const permissions = sdk.Action.withInput(
       List.text(
         {
           name: i18n('Permissions by IP range'),
-          description: i18n('For example: noban@192.0.2.0/24.'),
+          description: i18n(
+            'For example: noban@192.0.2.0/24. Permissions: noban, relay, forcerelay, mempool, download, bloomfilter, addr, all. Directions: in, out.',
+          ),
           default: [],
         },
         { minLength: 1 },

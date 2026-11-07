@@ -261,3 +261,79 @@ export function readinessMessage(body: string): string {
     })
   return i18n('Not ready')
 }
+
+export function mibToBytes(value: number): number {
+  const bytes = value * 1048576
+  if (!Number.isSafeInteger(bytes) || bytes < 0)
+    throw new Error(i18n('Enter a cache size in whole bytes.'))
+  return bytes
+}
+
+export function feeToSatVb(value: string): string {
+  const [whole, fraction = ''] = value.split('.')
+  const sats =
+    BigInt(whole || '0') * 100000000n + BigInt(fraction.padEnd(8, '0'))
+  const decimals = String(sats % 1000n)
+    .padStart(3, '0')
+    .replace(/0+$/, '')
+  return `${sats / 1000n}${decimals ? `.${decimals}` : ''}`
+}
+
+export function feeFromSatVb(value: string | number): string {
+  const match = /^(\d+)(?:\.(\d{1,3}))?$/.exec(String(value).trim())
+  if (!match)
+    throw new Error(i18n('Enter a fee in sat/vB with up to 3 decimal places.'))
+  const sats =
+    BigInt(match[1]) * 1000n + BigInt((match[2] || '').padEnd(3, '0'))
+  return `${sats / 100000000n}.${String(sats % 100000000n).padStart(8, '0')}`
+}
+
+export function rpcCredentials(store: Pick<Store, 'rpcPassword' | 'rpcToken'>) {
+  if (!store.rpcPassword || !store.rpcToken)
+    throw new Error(i18n('Generate RPC credentials first.'))
+  return {
+    version: '1' as const,
+    title: i18n('RPC credentials'),
+    message: i18n(
+      'Use the password with HTTP Basic, or the token with Bearer authentication.',
+    ),
+    result: {
+      type: 'group' as const,
+      value: [
+        { name: i18n('Username'), value: 'rbitcoin', masked: false },
+        { name: i18n('Password'), value: store.rpcPassword, masked: true },
+        { name: i18n('Bearer token'), value: store.rpcToken, masked: true },
+      ].map((field) => ({
+        ...field,
+        type: 'single' as const,
+        copyable: true,
+        qr: false,
+        launchable: false,
+        description: null,
+      })),
+    },
+  }
+}
+
+export function readinessResult(body: string, elapsed: number) {
+  const message = readinessMessage(body)
+  const stalled =
+    message === i18n('Busy') ||
+    message === i18n('Tip is stale') ||
+    message === i18n('Not ready')
+  if (stalled && elapsed >= 300_000)
+    return {
+      result: 'failure' as const,
+      message: i18n('Not ready. Check peers and logs.'),
+    }
+  return { result: 'loading' as const, message }
+}
+
+export function feeToInput(value: string): number {
+  const display = feeToSatVb(value)
+  const numeric = Number(display)
+  try {
+    if (feeFromSatVb(numeric) === feeFromSatVb(display)) return numeric
+  } catch {}
+  throw new Error(i18n('Fee cannot be represented exactly in this input.'))
+}

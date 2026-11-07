@@ -7,6 +7,7 @@ import {
   nodeArguments,
   ports,
   processEnvironment,
+  readinessResult,
   readinessMessage,
   runtimeConfig,
   validateConfig,
@@ -52,6 +53,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   })
   await fs.chown(await sub.subpath('/etc/rbitcoin.conf'), 10001, 10001)
 
+  let waitingSince: number | null = null
+  let previousReason = ''
   return sdk.Daemons.of(effects)
     .addOneshot('nocow', {
       subcontainer: sub,
@@ -113,20 +116,25 @@ export const main = sdk.setupMain(async ({ effects }) => {
               `http://127.0.0.1:${ports.health}/readyz`,
               { signal: AbortSignal.timeout(5000) },
             )
-            if (response.ok)
-              return {
-                result: 'success',
-              }
-            if (response.status === 503)
-              return {
-                result: 'loading',
-                message: readinessMessage(await response.text()),
-              }
+            if (response.ok) {
+              waitingSince = null
+              return { result: 'success' }
+            }
+            if (response.status === 503) {
+              const body = await response.text()
+              const reason = readinessMessage(body)
+              if (reason !== previousReason) waitingSince = null
+              previousReason = reason
+              waitingSince ??= Date.now()
+              return readinessResult(body, Date.now() - waitingSince)
+            }
+            waitingSince = null
             return {
               result: 'failure',
               message: i18n('Readiness check failed. Check the logs.'),
             }
           } catch {
+            waitingSince = null
             return {
               result: 'failure',
               message: i18n('Not responding. Check the logs.'),

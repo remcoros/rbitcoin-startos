@@ -9,21 +9,15 @@ export const privacy = sdk.Action.withInput(
   'privacy',
   {
     name: i18n('Proxies and networks'),
-    description: i18n(
-      'Proxies must already be running and reachable. Saving restarts a running node.',
-    ),
-    warning: null,
+    description: i18n('Choose peer networks and proxies.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Peers and privacy'),
     visibility: 'enabled',
   },
   InputSpec.of({
-    proxy: endpointInput(i18n('SOCKS5 proxy for all outbound P2P (IP:port)')),
-    onion: endpointInput(i18n('SOCKS5 proxy for onion peers (IP:port)')),
-    proxy_randomize: Value.toggle({
-      name: i18n('Randomize SOCKS credentials per peer'),
-      default: true,
-    }),
+    proxy: endpointInput(i18n('P2P proxy')),
+    onion: endpointInput(i18n('Onion proxy')),
     only_net: Value.union({
       name: i18n('Peer networks'),
       default: 'all',
@@ -47,12 +41,28 @@ export const privacy = sdk.Action.withInput(
         },
       }),
     }),
-    i2p_sam: endpointInput(i18n('External I2P SAM endpoint (IP:port)')),
+    i2p_sam: endpointInput(i18n('I2P SAM endpoint')),
     cjdns_reachable: Value.toggle({
       name: i18n('CJDNS routing is available'),
       default: false,
     }),
-  }),
+  }).add(({ Value }) => ({
+    proxy_randomize: Value.dynamicToggle(async ({ prefill }) => {
+      const config = await nodeConfig.read().once()
+      const proxy =
+        prefill?.proxy?.selection ?? (config?.proxy ? 'enabled' : 'disabled')
+      const onion =
+        prefill?.onion?.selection ?? (config?.onion ? 'enabled' : 'disabled')
+      return {
+        name: i18n('Randomize SOCKS credentials'),
+        default: true,
+        disabled:
+          proxy === 'enabled' || onion === 'enabled'
+            ? false
+            : i18n('Enable a SOCKS5 proxy first.'),
+      }
+    }),
+  })),
   async () => {
     const value = await nodeConfig.read().once()
     if (!value) return {}

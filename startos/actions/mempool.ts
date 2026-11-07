@@ -2,22 +2,23 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { validateConfig } from '../utils'
+import { feeToInput, feeFromSatVb, validateConfig } from '../utils'
 
 const { InputSpec, Value } = sdk
 export const mempool = sdk.Action.withInput(
   'mempool',
   {
     name: i18n('Mempool'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Set mempool limits and relay fees.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Policy and performance'),
     visibility: 'enabled',
   },
   InputSpec.of({
     mempool_size_mb: Value.number({
-      name: i18n('Mempool budget (millions of weight units)'),
+      name: i18n('Mempool budget'),
+      units: 'MWU',
       required: true,
       default: 300,
       min: 1,
@@ -25,7 +26,8 @@ export const mempool = sdk.Action.withInput(
       integer: true,
     }),
     mempool_expiry: Value.number({
-      name: i18n('Mempool expiry (hours)'),
+      name: i18n('Mempool expiry'),
+      units: 'h',
       required: true,
       default: 336,
       min: 1,
@@ -37,11 +39,14 @@ export const mempool = sdk.Action.withInput(
       default: true,
     }),
     blocks_only: Value.toggle({ name: i18n('Blocks only'), default: false }),
-    min_relay_tx_fee: Value.text({
-      name: i18n('Minimum relay fee (BTC per kvB)'),
+    min_relay_tx_fee: Value.number({
+      name: i18n('Minimum relay fee'),
+      units: 'sat/vB',
+      min: 0,
+      step: 0.001,
+      integer: false,
       required: true,
-      default: '0.00000100',
-      masked: false,
+      default: 0.1,
     }),
   }),
   async () => {
@@ -52,7 +57,7 @@ export const mempool = sdk.Action.withInput(
       mempool_expiry: value.mempool_expiry,
       persist_mempool: value.persist_mempool,
       blocks_only: value.blocks_only,
-      min_relay_tx_fee: value.min_relay_tx_fee,
+      min_relay_tx_fee: feeToInput(value.min_relay_tx_fee),
     }
   },
   async ({ effects, input }) => {
@@ -64,7 +69,7 @@ export const mempool = sdk.Action.withInput(
         mempool_expiry: input.mempool_expiry,
         persist_mempool: input.persist_mempool,
         blocks_only: input.blocks_only,
-        min_relay_tx_fee: input.min_relay_tx_fee.trim(),
+        min_relay_tx_fee: feeFromSatVb(input.min_relay_tx_fee),
       }
       await validateConfig(next)
       return next

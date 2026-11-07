@@ -9,10 +9,10 @@ export const logging = sdk.Action.withInput(
   'logging',
   {
     name: i18n('Logging'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Set log detail and API request logging.'),
+    warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
-    group: null,
+    group: i18n('Policy and performance'),
     visibility: 'enabled',
   },
   InputSpec.of({
@@ -31,6 +31,7 @@ export const logging = sdk.Action.withInput(
     api_log: Value.toggle({
       name: i18n('Log API calls'),
       description: i18n('Includes wallet requests. The log has no size limit.'),
+      warning: i18n('Includes wallet requests. The log has no size limit.'),
       default: false,
     }),
   }),

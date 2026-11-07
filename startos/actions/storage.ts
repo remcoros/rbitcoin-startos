@@ -2,47 +2,68 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { validateConfig } from '../utils'
+import { exists, mibToBytes, validateConfig } from '../utils'
 
-const { InputSpec, Value } = sdk
+const { InputSpec, Value, Variants } = sdk
 export const storage = sdk.Action.withInput(
   'storage',
   {
     name: i18n('Storage and pruning'),
-    description: i18n('Saving restarts a running node.'),
-    warning: null,
+    description: i18n('Set pruning, cache size, and HDD options.'),
+    warning: i18n('Pruning is permanent. Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Chain and storage'),
     visibility: 'enabled',
   },
-  InputSpec.of({
-    prune_seqsigwit: Value.toggle({
-      name: i18n('Prune script and witness data'),
-      description: i18n(
-        'Permanently deletes script and witness data older than 288 blocks. Cannot be turned off after pruning begins. Incompatible with Silent Payments.',
-      ),
-      default: false,
-    }),
-    prune_seqsigwit_ram_threshold_bytes: Value.number({
-      name: i18n('Witness RAM cache (bytes; 0: off)'),
-      required: true,
-      default: 268435456,
-      min: 0,
-      max: 9007199254740991,
-      integer: true,
-    }),
-    datadir_hdd: Value.toggle({
-      name: i18n('Optimize the main data directory for HDD'),
-      default: false,
-    }),
-  }),
+  async () => {
+    const pruned = await exists(
+      sdk.volumes.main.subpath('datadir/store/seqsigwit.prune'),
+    )
+    return InputSpec.of({
+      pruning: Value.dynamicUnion(() => ({
+        name: i18n('Pruning'),
+        default: 'disabled',
+        warning: i18n(
+          'Permanently deletes script and witness data older than 288 blocks. Cannot be turned off after pruning begins. Incompatible with Silent Payments.',
+        ),
+        disabled: pruned ? ['disabled'] : false,
+        variants: Variants.of({
+          disabled: { name: i18n('Disabled'), spec: InputSpec.of({}) },
+          enabled: {
+            name: i18n('Enabled'),
+            spec: InputSpec.of({
+              cache: Value.number({
+                name: i18n('Witness cache'),
+                units: 'MiB',
+                required: true,
+                default: 256,
+                min: 0,
+                max: Number.MAX_SAFE_INTEGER / 1048576,
+                step: 1,
+                integer: false,
+              }),
+            }),
+          },
+        }),
+      })),
+      datadir_hdd: Value.toggle({
+        name: i18n('Optimize for HDD'),
+        default: false,
+      }),
+    })
+  },
   async () => {
     const value = await nodeConfig.read().once()
     if (!value) return {}
     return {
-      prune_seqsigwit: value.prune_seqsigwit,
-      prune_seqsigwit_ram_threshold_bytes:
-        value.prune_seqsigwit_ram_threshold_bytes,
+      pruning: value.prune_seqsigwit
+        ? {
+            selection: 'enabled' as const,
+            value: {
+              cache: value.prune_seqsigwit_ram_threshold_bytes / 1048576,
+            },
+          }
+        : { selection: 'disabled' as const, value: {} },
       datadir_hdd: value.datadir_hdd,
     }
   },
@@ -51,9 +72,11 @@ export const storage = sdk.Action.withInput(
       if (!current) throw new Error(i18n('Configuration is not initialized.'))
       const next: NodeConfig = {
         ...current,
-        prune_seqsigwit: input.prune_seqsigwit,
+        prune_seqsigwit: input.pruning.selection === 'enabled',
         prune_seqsigwit_ram_threshold_bytes:
-          input.prune_seqsigwit_ram_threshold_bytes,
+          input.pruning.selection === 'enabled'
+            ? mibToBytes(input.pruning.value.cache)
+            : current.prune_seqsigwit_ram_threshold_bytes,
         datadir_hdd: input.datadir_hdd,
       }
       await validateConfig(next)
