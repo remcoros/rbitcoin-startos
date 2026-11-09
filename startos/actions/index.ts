@@ -1,4 +1,5 @@
 import { sdk } from '../sdk'
+import { rebuildAddress, rebuildTransaction, resync } from './recovery'
 import { indexes } from './indexes'
 import { storage } from './storage'
 import { peers } from './peers'
@@ -13,6 +14,9 @@ import { logging } from './logging'
 import { setRpcCredentials, viewRpcCredentials } from './setRpcCredentials'
 
 export const actions = sdk.Actions.of()
+  .addAction(resync)
+  .addAction(rebuildAddress)
+  .addAction(rebuildTransaction)
   .addAction(indexes)
   .addAction(storage)
   .addAction(peers)

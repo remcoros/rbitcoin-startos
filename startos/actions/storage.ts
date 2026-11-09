@@ -2,7 +2,7 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { exists, mibToBytes, validateConfig } from '../utils'
+import { hasPrunedStore, mibToBytes, validateConfig } from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 export const storage = sdk.Action.withInput(
@@ -16,9 +16,7 @@ export const storage = sdk.Action.withInput(
     visibility: 'enabled',
   },
   async () => {
-    const pruned = await exists(
-      sdk.volumes.main.subpath('datadir/store/seqsigwit.prune'),
-    )
+    const pruned = await hasPrunedStore()
     return InputSpec.of({
       pruning: Value.dynamicUnion(() => ({
         name: i18n('Pruning'),
