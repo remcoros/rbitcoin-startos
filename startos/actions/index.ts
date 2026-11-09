@@ -14,9 +14,6 @@ import { logging } from './logging'
 import { setRpcCredentials, viewRpcCredentials } from './setRpcCredentials'
 
 export const actions = sdk.Actions.of()
-  .addAction(resync)
-  .addAction(rebuildAddress)
-  .addAction(rebuildTransaction)
   .addAction(indexes)
   .addAction(storage)
   .addAction(peers)
@@ -30,3 +27,6 @@ export const actions = sdk.Actions.of()
   .addAction(mempool)
   .addAction(performance)
   .addAction(logging)
+  .addAction(rebuildAddress)
+  .addAction(rebuildTransaction)
+  .addAction(resync)

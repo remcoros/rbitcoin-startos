@@ -57,6 +57,8 @@ an incoming port does not require this privacy change.
 
 ## Recovery
 
+Recovery actions are under **Recovery**, after the other action groups.
+
 Use **Rebuild address history** when the address history index is damaged. Use
 **Rebuild transaction lookup** when that index is damaged. The node restarts if
 running; otherwise the rebuild starts the next time you start it. The **Readiness**

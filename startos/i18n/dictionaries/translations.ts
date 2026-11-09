@@ -468,7 +468,7 @@ export default {
     299: 'Przywrócony łańcuch jest przycięty. Włączono przycinanie i wyłączono Silent Payments. Sprawdź ustawienia pamięci.',
     297: 'Węzeł zostanie zatrzymany. Dane łańcucha, indeksy, peery i mempool zostaną usunięte przy następnym uruchomieniu. Synchronizacja może potrwać kilka dni.',
     298: 'Wybierz ustawienia przed uruchomieniem. Dane łańcucha zostaną usunięte przy starcie usługi.',
-    276: 'Odzyskiwanie',
+    276: 'Środki odzyskiwania',
     277: 'Synchronizuj od nowa',
     278: 'Usuń dane łańcucha i zsynchronizuj ponownie. Ustawienia i dane dostępowe pozostaną zachowane.',
     279: 'Węzeł zostanie zatrzymany. Dane łańcucha, indeksy, peery i mempool zostaną usunięte. Synchronizacja może potrwać kilka dni.',

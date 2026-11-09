@@ -127,8 +127,8 @@ with owner-only permissions. The fixed Basic username is `rbitcoin`.
 ## Actions
 
 Actions are grouped into **Chain and storage**, **Peers and privacy**, **Clients and
-mining**, and **Policy and performance**. Logging is grouped with policy and performance. StartOS
-determines their display order; numeric prefixes are not used. Configuration changes
+mining**, and **Policy and performance**. Recovery actions are in the **Recovery** group after the other package action groups. Logging is grouped with policy and performance.
+StartOS determines their display order; numeric prefixes are not used. Configuration changes
 restart a running node and are safe to repeat with the same values, except that enabling pruning can
 permanently remove historical witness data and enabling indexes can require
 substantial work.
