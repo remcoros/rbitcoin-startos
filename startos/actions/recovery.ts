@@ -92,7 +92,19 @@ export const resync = sdk.Action.withoutInput(
         throw new Error(i18n('Another recovery is already pending.'))
       throw error
     }
-    await sdk.shutdown(effects)
+    try {
+      await sdk.shutdown(effects)
+    } catch (error) {
+      console.error(
+        'Unable to confirm node stop after scheduling resync:',
+        error,
+      )
+      throw new Error(
+        i18n(
+          'Resync was scheduled, but the node stop could not be confirmed. Chain data may be deleted on the next start. Check the service status and logs before starting.',
+        ),
+      )
+    }
     return {
       version: '1',
       title: i18n('Recovery scheduled'),

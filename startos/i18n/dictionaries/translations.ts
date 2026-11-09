@@ -2,6 +2,7 @@ import { LangDict } from './default'
 
 export default {
   es_ES: {
+    300: 'Se programó la resincronización, pero no se pudo confirmar que el nodo se detuvo. Los datos de la cadena podrían borrarse en el próximo inicio. Comprueba el estado del servicio y los registros antes de iniciarlo.',
     299: 'La cadena restaurada está podada. Se activó la poda y se desactivaron los pagos silenciosos para que coincidan. Revisa el almacenamiento.',
     297: 'El nodo se detendrá. La cadena, los índices, los pares y la mempool se eliminarán al iniciar el servicio de nuevo. La sincronización puede tardar días.',
     298: 'Elige la configuración antes de iniciar. Los datos de la cadena se eliminarán al arrancar el servicio.',
@@ -234,6 +235,7 @@ export default {
     '207': 'Lecturas de disco API simultáneas (0: automático)',
   },
   de_DE: {
+    300: 'Die erneute Synchronisierung wurde geplant, aber das Stoppen des Knotens konnte nicht bestätigt werden. Beim nächsten Start können Kettendaten gelöscht werden. Prüfe vor dem Start den Dienststatus und die Logs.',
     299: 'Die wiederhergestellte Kette ist beschnitten. Pruning wurde aktiviert und Silent Payments wurden deaktiviert. Prüfe die Speichereinstellungen.',
     297: 'Der Knoten wird gestoppt. Kettendaten, Indizes, Peers und Mempool werden beim nächsten Start gelöscht. Die Synchronisierung kann Tage dauern.',
     298: 'Wähle die Einstellungen vor dem Start. Die Kettendaten werden beim Start gelöscht.',
@@ -462,6 +464,7 @@ export default {
     '207': 'Gleichzeitige API-Datenträgerzugriffe (0: automatisch)',
   },
   pl_PL: {
+    300: 'Ponowna synchronizacja została zaplanowana, ale nie udało się potwierdzić zatrzymania węzła. Dane łańcucha mogą zostać usunięte przy następnym uruchomieniu. Przed uruchomieniem sprawdź stan usługi i logi.',
     299: 'Przywrócony łańcuch jest przycięty. Włączono przycinanie i wyłączono Silent Payments. Sprawdź ustawienia pamięci.',
     297: 'Węzeł zostanie zatrzymany. Dane łańcucha, indeksy, peery i mempool zostaną usunięte przy następnym uruchomieniu. Synchronizacja może potrwać kilka dni.',
     298: 'Wybierz ustawienia przed uruchomieniem. Dane łańcucha zostaną usunięte przy starcie usługi.',
@@ -688,6 +691,7 @@ export default {
     '207': 'Równoczesne odczyty API z dysku (0: automatycznie)',
   },
   fr_FR: {
+    300: 'La resynchronisation a été planifiée, mais l’arrêt du nœud n’a pas pu être confirmé. Les données de chaîne peuvent être supprimées au prochain démarrage. Vérifiez l’état du service et les journaux avant de le démarrer.',
     299: 'La chaîne restaurée est élaguée. L’élagage a été activé et les Silent Payments désactivés. Vérifiez les réglages de stockage.',
     297: 'Le nœud sera arrêté. Les données de chaîne, index, pairs et mempool seront supprimés au prochain démarrage. La synchronisation peut prendre plusieurs jours.',
     298: 'Choisissez les réglages avant le démarrage. Les données de chaîne seront supprimées au démarrage du service.',

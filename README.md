@@ -163,7 +163,9 @@ condition. Optional client APIs do not force credential setup when they are disa
 **Resync from scratch** schedules a reset and stops the service. Settings and RPC
 credentials remain; choose settings before starting again. At the next start,
 the package deletes the chain, indexes, peers, mempool and API log before
-launching the node. Disk space is reclaimed then. If deletion fails or is
+launching the node. Disk space is reclaimed then. If the stop request fails,
+the action warns that the reset was scheduled and may still run on the next
+start; check service status and logs before starting. If deletion fails or is
 interrupted, the request remains and the next start retries it. Restore clears
 the pending request, so restoring a backup does not replay the reset. If a
 restored archive is pruned but the pending settings required unpruned data,

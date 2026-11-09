@@ -221,6 +221,7 @@ const dict = {
   'The node will stop. Chain data, indexes, peers, and mempool will be deleted when the service next starts. Syncing again may take days.': 297,
   'Choose settings before starting. Chain data will be deleted when the service starts.': 298,
   'The restored chain is pruned. Pruning was enabled and Silent Payments disabled to match it. Review storage settings.': 299,
+  'Resync was scheduled, but the node stop could not be confirmed. Chain data may be deleted on the next start. Check the service status and logs before starting.': 300,
 } as const
 
 export type I18nKey = keyof typeof dict

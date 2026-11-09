@@ -67,8 +67,9 @@ Use **Resync from scratch** as a last resort. It stops the service and schedules
 deletion of its chain data, indexes, peer list, mempool, and API log. Settings and
 RPC credentials remain. Choose pruning and index settings before starting the
 service again. The data is deleted and disk space reclaimed at the next start,
-before the new sync begins. The initial sync can take days and requires substantial
-disk space.
+before the new sync begins. If stopping cannot be confirmed, the reset may still
+run on the next start; check the service status and logs before starting. The
+initial sync can take days and requires substantial disk space.
 
 Each enabled API has its own health check. The Stratum v2 check shows whether
 its port is listening; it does not check template delivery.
