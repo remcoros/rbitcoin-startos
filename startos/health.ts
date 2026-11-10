@@ -1,4 +1,5 @@
 import { connect } from 'node:net'
+import { sdk } from './sdk'
 import { i18n } from './i18n'
 import { ports } from './utils'
 
@@ -117,12 +118,173 @@ export async function checkApi(
           result: 'failure' as const,
           message: i18n('API unavailable. Check the logs.'),
         }
+      if (ready.status === 503) {
+        const reason = (await ready.text()).trim().replace(/^not ready: /, '')
+        if (reason === 'catch-up' || reason === 'initial block download')
+          return {
+            result: 'loading' as const,
+            waiting: true,
+            message: i18n('API unavailable while syncing.'),
+          }
+      }
     } catch {
       /* node readiness is not available yet */
     }
     return {
       result: 'loading' as const,
-      message: i18n('API unavailable. Check the logs.'),
+      waiting: true,
+      message: i18n('API unavailable while the node is not ready.'),
+    }
+  }
+}
+
+export function observeInitialSyncPeers(now = () => performance.now()) {
+  let pending = ''
+  let discard = false
+  let sample: { count: number; at: number } | null = null
+  return {
+    reset() {
+      pending = ''
+      discard = false
+      sample = null
+    },
+    consume(chunk: Buffer | string) {
+      const lines = (pending + chunk.toString()).split('\n')
+      pending = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!discard && line.length <= 16384) {
+          const clean = line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+          const match =
+            /^\S+ INFO\s+ibd: progress\b.*?\bpeers=(\d+)(?=\s|$)/.exec(clean)
+          if (match) {
+            const count = Number(match[1])
+            if (Number.isSafeInteger(count)) sample = { count, at: now() }
+          }
+        }
+        discard = false
+      }
+      if (pending.length > 16384) {
+        pending = ''
+        discard = true
+      }
+    },
+    count() {
+      return sample && now() - sample.at < 30_000 ? sample.count : null
+    },
+  }
+}
+
+async function noOutgoingPeers(
+  effects: import('@start9labs/start-sdk').T.Effects,
+  config: import('./fileModels/rbitcoin.conf').NodeConfig,
+  prefs: import('./fileModels/store.json').Store,
+) {
+  const needsTor =
+    prefs.outgoingRouting === 'tor' ||
+    (config.only_net.length > 0 &&
+      config.only_net.every((n) => n === 'onion')) ||
+    (config.connect.length > 0 &&
+      config.connect.every((p) => p.toLowerCase().includes('.onion:')))
+  if (needsTor) {
+    const status = await sdk.getStatus(effects, { packageId: 'tor' }).once()
+    if (!status || status.desired.main !== 'running' || status.error)
+      return {
+        result: 'failure' as const,
+        message: i18n(
+          'Tor is unavailable. Install or start Tor to connect to peers.',
+        ),
+      }
+  }
+  return {
+    result: 'failure' as const,
+    message: i18n('No outgoing peers connected. Check peer settings and logs.'),
+  }
+}
+
+export async function checkPeers(
+  effects: import('@start9labs/start-sdk').T.Effects,
+  sub: {
+    execFail(
+      command: string[],
+      options: { timeout: number },
+    ): Promise<{ stdout: string | Buffer }>
+  },
+  config: import('./fileModels/rbitcoin.conf').NodeConfig,
+  prefs: import('./fileModels/store.json').Store,
+  i2pAvailable: boolean,
+  initialSyncPeers: ReturnType<typeof observeInitialSyncPeers>,
+) {
+  let ready: Response
+  try {
+    // The RPC snapshot excludes fast IBD peers. Check its scope before using it.
+    ready = await fetch(`http://127.0.0.1:${ports.health}/readyz`, {
+      signal: timeout(),
+    })
+    if (ready.status === 503) {
+      const reason = (await ready.text()).trim().replace(/^not ready: /, '')
+      if (['opening', 'starting', 'stopping'].includes(reason))
+        return {
+          result: 'starting' as const,
+          message: i18n('Connecting to peers'),
+        }
+      if (reason === 'catch-up') {
+        if (!['info', 'debug', 'trace'].includes(config.log_level))
+          return {
+            result: 'disabled' as const,
+            message: i18n('Initial sync peer reporting requires Info logging'),
+          }
+        const count = initialSyncPeers.count()
+        if (count === null)
+          return {
+            result: 'failure' as const,
+            message: i18n('Unable to read initial sync peer count'),
+          }
+        if (count === 0) return await noOutgoingPeers(effects, config, prefs)
+        return {
+          result: 'success' as const,
+          message: i18n('${outgoing} outgoing peers for initial sync', {
+            outgoing: count,
+          }),
+        }
+      }
+    } else if (!ready.ok) throw new Error('readiness unavailable')
+  } catch {
+    return {
+      result: 'failure' as const,
+      message: i18n('Unable to read peer connections. Check the logs.'),
+    }
+  }
+  try {
+    const { stdout } = await sub.execFail(
+      ['rbitcoin-cli', '--rpc-socket', '/data/datadir/rpc.sock', 'getpeerinfo'],
+      { timeout: 5000 },
+    )
+    const peers: unknown = JSON.parse(stdout.toString())
+    if (
+      !Array.isArray(peers) ||
+      peers.some((p) => !p || typeof p.inbound !== 'boolean')
+    )
+      throw new Error('invalid peer info')
+    const incoming = peers.filter((p) => p.inbound).length
+    const outgoing = peers.length - incoming
+    if (outgoing === 0) return await noOutgoingPeers(effects, config, prefs)
+    const counts = i18n('${incoming} incoming, ${outgoing} outgoing peers', {
+      incoming,
+      outgoing,
+    })
+    return {
+      result: 'success' as const,
+      message:
+        prefs.i2pEnabled &&
+        prefs.outgoingRouting === 'standard' &&
+        !i2pAvailable
+          ? i18n('${peers}. I2P is unavailable.', { peers: counts })
+          : counts,
+    }
+  } catch {
+    return {
+      result: 'failure' as const,
+      message: i18n('Unable to read peer connections. Check the logs.'),
     }
   }
 }

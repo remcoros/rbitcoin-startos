@@ -6,18 +6,21 @@ import { validateConfig } from '../utils'
 
 const { InputSpec, Value } = sdk
 export const logging = sdk.Action.withInput(
-  'logging',
+  'node-logging',
   {
     name: i18n('Logging'),
     description: i18n('Set log detail and API request logging.'),
     warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
-    group: i18n('Policy and performance'),
+    group: i18n('Policy and logging'),
     visibility: 'enabled',
   },
   InputSpec.of({
     log_level: Value.select({
       name: i18n('Log level'),
+      description: i18n(
+        'Initial sync peer reporting needs info, debug, or trace. Other levels disable that reporting until initial sync finishes.',
+      ),
       default: 'info',
       values: {
         error: 'error',

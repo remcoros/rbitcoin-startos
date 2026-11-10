@@ -15,19 +15,13 @@ export const seedFiles = sdk.setupOnInit(async (effects, kind) => {
       sdk.volumes.main.subpath('datadir/store/seqsigwit.prune'),
     )
     const config = await nodeConfig.read().once()
-    if (
-      pending === 'resync' &&
-      pruned &&
-      config &&
-      (!config.prune_seqsigwit || config.sp_tweaks)
-    ) {
+    if (pending === 'resync' && pruned && config && !config.prune_seqsigwit) {
       await nodeConfig.merge(effects, {
         prune_seqsigwit: true,
-        sp_tweaks: false,
       })
       await sdk.action.createOwnTask(effects, storage, 'important', {
         reason: i18n(
-          'The restored chain is pruned. Pruning was enabled and Silent Payments disabled to match it. Review storage settings.',
+          'The restored chain is pruned. Pruning was enabled to match it. Review storage settings.',
         ),
       })
     }

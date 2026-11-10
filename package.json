@@ -1,7 +1,9 @@
 {
   "name": "rbitcoin-startos",
   "dependencies": {
-    "@start9labs/start-sdk": "4.0.0"
+    "@start9labs/start-sdk": "4.1.0",
+    "i2pd-startos": "github:Start9Labs/i2pd-startos#next",
+    "tor-startos": "github:Start9Labs/tor-startos#next"
   },
   "overrides": {
     "@start9labs/start-sdk": "$@start9labs/start-sdk"

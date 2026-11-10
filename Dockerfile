@@ -1,4 +1,4 @@
-FROM ghcr.io/rbitcoin-org/rbitcoin:0.9.0@sha256:e8349beec53714cd05f4a46d17e7e0d0956296c497de4a44c0fee807c6ed1339 AS upstream
+FROM ghcr.io/rbitcoin-org/rbitcoin:0.9.1@sha256:07ba41581f0c8f4c98a4b35c1106c61fe1b7c6c2c36cbd8321e7919efaae5207 AS upstream
 
 FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4
 
