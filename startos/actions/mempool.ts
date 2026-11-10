@@ -12,7 +12,7 @@ export const mempool = sdk.Action.withInput(
     description: i18n('Set mempool limits and relay fees.'),
     warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
-    group: i18n('Policy and performance'),
+    group: i18n('Policy and logging'),
     visibility: 'enabled',
   },
   InputSpec.of({

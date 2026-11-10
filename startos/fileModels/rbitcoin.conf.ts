@@ -17,22 +17,10 @@ export const configShape = z.looseObject({
     .max(9007199254740991)
     .catch(268435456),
   datadir_hdd: z.boolean().catch(false),
-  listen: z.enum(['0.0.0.0:8333', '0']).catch('0.0.0.0:8333'),
   max_outbound: z.number().int().min(1).max(4294967295).catch(16),
   max_inbound: z.number().int().min(0).max(4294967295).catch(200),
   connect: z.array(singleLine).catch([]),
-  seed_node: z.array(singleLine).catch([]),
-  no_seeds: z.boolean().catch(false),
-  no_discover: z.boolean().catch(false),
-  external_ip: z.array(singleLine).catch([]),
-  proxy: singleLine.min(1).nullable().catch(null),
-  onion: singleLine.min(1).nullable().catch(null),
-  proxy_randomize: z.boolean().catch(true),
-  only_net: z
-    .array(z.enum(['ipv4', 'ipv6', 'onion', 'i2p', 'cjdns']))
-    .catch([]),
-  i2p_sam: singleLine.min(1).nullable().catch(null),
-  cjdns_reachable: z.boolean().catch(false),
+  only_net: z.array(z.enum(['ipv4', 'ipv6', 'onion', 'i2p'])).default([]),
   mempool_size_mb: z.number().int().min(1).max(4294967295).catch(300),
   mempool_expiry: z.number().int().min(1).max(4294967295).catch(336),
   persist_mempool: z.boolean().catch(true),

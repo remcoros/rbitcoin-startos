@@ -11,6 +11,24 @@ import { Store } from './fileModels/store.json'
 
 export const recoveryRequest = sdk.volumes.startos.subpath('recovery.request')
 
+export function healthReportingEffects(
+  effects: import('@start9labs/start-sdk').T.Effects,
+): typeof effects {
+  return {
+    ...effects,
+    setHealth: (health) => {
+      return effects.setHealth(
+        health.message == null
+          ? health
+          : {
+              ...health,
+              message: health.message.trimEnd().replace(/(?<!\.)\.$/u, ''),
+            },
+      )
+    },
+  }
+}
+
 export async function pendingRecovery(): Promise<string | null> {
   try {
     return await fs.readlink(recoveryRequest)
@@ -37,33 +55,6 @@ export const ports = {
   sv2: 8442,
 }
 
-export function endpointInput(name: string) {
-  return sdk.Value.union({
-    name,
-    default: 'disabled',
-    variants: sdk.Variants.of({
-      disabled: { name: i18n('Disabled'), spec: sdk.InputSpec.of({}) },
-      enabled: {
-        name: i18n('Enabled'),
-        spec: sdk.InputSpec.of({
-          address: sdk.Value.text({
-            name: i18n('Endpoint (IP:port)'),
-            required: true,
-            default: null,
-            minLength: 1,
-            masked: false,
-          }),
-        }),
-      },
-    }),
-  })
-}
-
-export function endpointPrefill(address: string | null) {
-  return address
-    ? { selection: 'enabled' as const, value: { address } }
-    : { selection: 'disabled' as const, value: {} }
-}
 export async function exists(path: string): Promise<boolean> {
   try {
     await fs.stat(path)
@@ -73,16 +64,6 @@ export async function exists(path: string): Promise<boolean> {
       return false
     throw error
   }
-}
-
-export function isSocket(value: string): boolean {
-  const match = /^(?:\[([^\]]+)\]|([^:]+)):([0-9]+)$/.exec(value)
-  return (
-    !!match &&
-    !!isIP(match[1] || match[2]) &&
-    Number(match[3]) >= 1 &&
-    Number(match[3]) <= 65535
-  )
 }
 
 // Matches v0.9.0's parse_permission_flags, before validating the target below.
@@ -145,35 +126,13 @@ export async function validateConfig(next: NodeConfig): Promise<void> {
         i18n('Use an IP address or CIDR range for peer permissions.'),
       )
   }
-  if (next.prune_seqsigwit && next.sp_tweaks)
-    throw new Error(i18n('Silent Payments requires unpruned data.'))
-  if ((!next.prune_seqsigwit || next.sp_tweaks) && (await hasPrunedStore()))
-    throw new Error(
-      i18n('This store is pruned. Keep pruning on and Silent Payments off.'),
-    )
-  for (const value of [next.proxy, next.onion, next.i2p_sam]) {
-    if (value !== null && !isSocket(value))
-      throw new Error(
-        i18n(
-          'Proxy and SAM endpoints must be numeric IPv4:port or [IPv6]:port addresses.',
-        ),
-      )
-  }
-  if (next.only_net.includes('onion') && !next.proxy && !next.onion)
-    throw new Error(i18n('Onion peers need a SOCKS5 proxy.'))
-  if (next.only_net.includes('i2p') && !next.i2p_sam)
-    throw new Error(i18n('I2P networking requires a SAM endpoint.'))
-  if (next.only_net.includes('cjdns') && !next.cjdns_reachable)
-    throw new Error(
-      i18n('Enable CJDNS routing before selecting the CJDNS network.'),
-    )
+  if (!next.prune_seqsigwit && (await hasPrunedStore()))
+    throw new Error(i18n('This store is pruned. Keep pruning on.'))
   if (
-    next.only_net.some(
-      (net) => !['ipv4', 'ipv6', 'onion', 'i2p', 'cjdns'].includes(net),
-    )
+    next.only_net.some((net) => !['ipv4', 'ipv6', 'onion', 'i2p'].includes(net))
   )
     throw new Error(
-      i18n('Allowed networks are ipv4, ipv6, onion, i2p, and cjdns.'),
+      i18n('Choose IPv4, IPv6, Tor, or I2P for automatic peer connections.'),
     )
   if (next.rest && !next.rpc_listen)
     throw new Error(
@@ -216,13 +175,16 @@ export function processEnvironment(store: Store): Record<string, string> {
   return env
 }
 
-export function runtimeConfig(config: NodeConfig): string {
+export function runtimeConfig(
+  config: NodeConfig,
+  network: Record<string, unknown> = {},
+): string {
   const supported = Object.fromEntries(
     Object.entries(config).filter(([key]) =>
       Object.hasOwn(configShape.shape, key),
     ),
   )
-  return serializeConfig(configShape.parse(supported))
+  return serializeConfig({ ...configShape.parse(supported), ...network })
 }
 
 export function nodeArguments(config: NodeConfig): string[] {
@@ -235,6 +197,7 @@ export function nodeArguments(config: NodeConfig): string[] {
     '/data/datadir',
     '--health-listen',
     '0.0.0.0:9332',
+    '--rpc',
   ]
   if (config.rpc_listen)
     args.push(
@@ -257,7 +220,7 @@ export function readinessMessage(body: string): string {
       return i18n('Starting')
     case 'catch-up':
     case 'initial block download':
-      return i18n('Syncing')
+      return i18n('Syncing...')
     case 'indexing':
       return i18n('Indexing')
     case 'stopping':
@@ -276,6 +239,26 @@ export function readinessMessage(body: string): string {
       blocks: Number(index[1]),
     })
   return i18n('Not ready')
+}
+
+export function syncProgressMessage(info: unknown): string | null {
+  if (!info || typeof info !== 'object') return null
+  const { blocks, headers } = info as { blocks?: unknown; headers?: unknown }
+  if (
+    typeof blocks !== 'number' ||
+    typeof headers !== 'number' ||
+    !Number.isSafeInteger(blocks) ||
+    !Number.isSafeInteger(headers) ||
+    blocks < 0 ||
+    headers <= 0 ||
+    blocks >= headers
+  )
+    return null
+  return i18n('Syncing... ${percent}% (${blocks} / ${headers} blocks)', {
+    percent: ((blocks / headers) * 100).toFixed(1),
+    blocks,
+    headers,
+  })
 }
 
 export function mibToBytes(value: number): number {

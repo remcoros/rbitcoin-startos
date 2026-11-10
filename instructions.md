@@ -18,8 +18,8 @@ Mainnet needs substantial disk space and an initial sync.
 4. Start the node. Wait for the **Readiness** health check to pass before connecting
    clients.
 
-Leave **Disk I/O backend** on **Automatic** in **Performance** unless you need an
-override.
+Leave **Disk I/O backend** on **Automatic** in **Storage and pruning** unless you need an
+override. It appears below **Optimize for HDD**.
 
 ## Using rbitcoin
 
@@ -44,16 +44,50 @@ provider. Generate or supply a valid authority key before enabling it. The provi
 uses Noise encryption; miners need its matching authority public key from the node
 logs.
 
-Settings show saved values. Proxies start **Disabled** and peer
-networks use **All available**. Enter an endpoint only when enabling a proxy.
-Use **API limits** for advanced client limits. Fees use sat/vB; the witness cache uses MiB.
-Saving settings restarts a running node. API call logging includes wallet requests
-and has no size limit.
+### Peer connections
+
+Use **Peer Settings** to choose how rbitcoin connects:
+
+- **Standard** connects directly to IPv4 and IPv6 peers. Onion peers use the Tor
+  service when it is installed and running. Direct peers can see your outbound IP.
+- **Through Tor** routes IPv4, IPv6, and onion peer connections through Tor,
+  including manually specified peers. If Tor is unavailable, connections wait;
+  there is no direct fallback. This setting does not change incoming access.
+- **I2P connections** adds outgoing I2P peers in Standard mode. Install and start
+  the I2P service; rbitcoin configures the connection automatically. I2P starts
+  disabled. Its preference is kept while using Through Tor. Activating or
+  restoring I2P may restart rbitcoin. Incoming I2P is not supported.
+- **Accept incoming peer connections** lets other nodes reach yours. Publish
+  addresses through the **P2P** interface in StartOS. A published onion can be
+  shared with other operators, but this version does not automatically announce
+  externally managed onions to Bitcoin peers. Public IP advertisements require
+  external port 8333; a task explains incompatible published addresses.
+
+Use **Advanced Peer Settings** for automatic peer networks, connection limits,
+and **Manual peers**. A local node can improve initial sync. Include its port,
+for example `192.168.1.10:8333`, and use Standard routing. Leave the list empty to
+discover peers automatically. A manual list disables normal automatic discovery;
+previously known peers may still be used during initial sync. Automatic network
+selection does not restrict manually specified peers or incoming connections.
+
+The **Peers** health check stays visible while syncing. During initial sync it
+shows outgoing sync peers; afterward it shows incoming and outgoing counts. A
+positive outgoing count gets a green check. The check allows five minutes for
+startup before warning about missing connections or unavailable peer counts.
+IBD peer reporting needs log level **info**, **debug**, or **trace**. Other levels
+disable that reporting until initial sync finishes; networking keeps running.
+A clock on an API check means that API is waiting for the node to finish starting
+or syncing. **Readiness** shows a spinner and progress while syncing. I2P-only
+settings wait for I2P rather than switching to another network.
+
+Use **API limits** for advanced client limits. Fees use sat/vB; the witness cache
+uses MiB. Saving settings restarts a running node. API call logging includes wallet
+requests and has no size limit.
 
 If you publish P2P through a tunnel to keep your home IP private, route the node's
-outbound connections through that tunnel too, or configure a suitable outbound proxy.
-Otherwise the peers it contacts can see your home IP. A tunnel used only to obtain
-an incoming port does not require this privacy change.
+outbound connections through that tunnel too, or choose Through Tor. Otherwise
+its direct peers can see your home IP. A tunnel used only to obtain an incoming
+port does not require this privacy change.
 
 ## Recovery
 
@@ -69,22 +103,36 @@ Use **Resync from scratch** as a last resort. It stops the service and schedules
 deletion of its chain data, indexes, peer list, mempool, and API log. Settings and
 RPC credentials remain. Choose pruning and index settings before starting the
 service again. The data is deleted and disk space reclaimed at the next start,
-before the new sync begins. If stopping cannot be confirmed, the reset may still
+before the new sync begins. Check the service logs for removal progress; deleting
+the old data can take time. If stopping cannot be confirmed, the reset may still
 run on the next start; check the service status and logs before starting. The
 initial sync can take days and requires substantial disk space.
 
 Each enabled API has its own health check. The Stratum v2 check shows whether
 its port is listening; it does not check template delivery.
 
+During sync, **Readiness** shows the current block height against known headers
+and their percentage. This is a block count, not an estimate of remaining time;
+later blocks can take longer to process. It works with network JSON-RPC disabled.
+While the node discovers its header target, it shows **Syncing...** without a percentage.
+
 ## Limitations
 
 Pruning permanently deletes script and witness data older than 288 blocks. Once it
-begins, it cannot be turned off for that data store. It cannot be combined with the
-Silent Payment index. Choose your pruning policy before a large sync.
+begins, it cannot be turned off for that data store. If you need Silent Payments,
+enable the index before syncing with pruning, or let it catch up before enabling
+pruning. On an already pruned chain, the index can only be enabled if it covers
+the pruned blocks. Disabling the index while pruning can prevent you from enabling
+it again later. **Witness cache** sets a size threshold for recent script and witness
+data cached in RAM. Memory overhead is extra. Higher values can reduce disk reads;
+0 disables the RAM cache while
+keeping recent data on disk. If the node cannot start after changing these settings, check its logs.
 
 The package does not provide a wallet, a full Bitcoin Core RPC clone, a Tor/I2P router,
-or native Tor-control/inbound-I2P forwarding. Outbound proxies and SAM endpoints must
-already exist and be reachable. Peer permission grants refer to the address the node
+or native Tor-control/inbound-I2P forwarding. Tor and I2P are separate services;
+there are no custom proxy or SAM endpoint fields. Through Tor configures supported
+peer connections, not an OS-level firewall against advanced administrative RPC
+commands. Peer permission grants refer to the address the node
 actually sees, which may be a gateway/proxy address for forwarded connections.
 
 Backups include the entire chain and every index. Allow enough backup space for the
@@ -92,7 +140,7 @@ full node data.
 
 ## Documentation
 
-- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
-- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
-- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/docs/rpc.md) — supported methods and authentication.
-- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.x/COMPAT.md) — supported wallet and API behavior.
+- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
+- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
+- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/rpc.md) — supported methods and authentication.
+- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/COMPAT.md) — supported wallet and API behavior.

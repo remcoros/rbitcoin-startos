@@ -1,97 +1,77 @@
-import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { validateConfig } from '../utils'
+import { storeJson } from '../fileModels/store.json'
+import { validateNetworkSettings } from '../networking'
 
-const { InputSpec, Value, List } = sdk
+const { InputSpec, Value } = sdk
 export const peers = sdk.Action.withInput(
   'peers',
   {
-    name: i18n('Peers'),
-    description: i18n('Manage peer connections and discovery.'),
+    name: i18n('Peer Settings'),
+    description: i18n('Choose how rbitcoin connects to peers.'),
     warning: i18n('Saving restarts a running node.'),
     allowedStatuses: 'any',
     group: i18n('Peers and privacy'),
     visibility: 'enabled',
   },
   InputSpec.of({
-    listen: Value.toggle({
-      name: i18n('Incoming P2P'),
+    outgoingRouting: Value.select({
+      name: i18n('Outgoing connections'),
+      description: i18n(
+        'Standard connects directly to IPv4 and IPv6 peers and uses Tor for onion peers. Through Tor routes IPv4, IPv6, and onion peer connections through Tor, with no direct fallback. Incoming access is configured separately.',
+      ),
+      default: 'standard',
+      values: { standard: i18n('Standard'), tor: i18n('Through Tor') },
+    }),
+    acceptIncomingPeers: Value.toggle({
+      name: i18n('Accept incoming peer connections'),
+      description: i18n(
+        'Let other Bitcoin peers connect to your node. Publish addresses using the P2P interface in StartOS.',
+      ),
       default: true,
     }),
-    max_outbound: Value.number({
-      name: i18n('Maximum outbound peers'),
-      required: true,
-      default: 16,
-      min: 1,
-      max: 4294967295,
-      integer: true,
-    }),
-    max_inbound: Value.number({
-      name: i18n('Maximum inbound peers'),
-      required: true,
-      default: 200,
-      min: 0,
-      max: 4294967295,
-      integer: true,
-    }),
-    connect: Value.list(
-      List.text(
-        { name: i18n('Connect only to these peers (host:port)'), default: [] },
-        { minLength: 1 },
+  }).add(({ Value }) => ({
+    i2pEnabled: Value.dynamicToggle(async ({ prefill }) => ({
+      name: i18n('I2P connections'),
+      description: i18n(
+        'Also connect to peers over I2P in Standard mode. Requires the I2P service. The preference is kept while using Through Tor. Enabling or restoring I2P may restart rbitcoin.',
       ),
-    ),
-    seed_node: Value.list(
-      List.text(
-        { name: i18n('Additional seed nodes'), default: [] },
-        { minLength: 1 },
-      ),
-    ),
-    no_seeds: Value.toggle({
-      name: i18n('Disable DNS and fixed seeds'),
       default: false,
-    }),
-    no_discover: Value.toggle({
-      name: i18n('Disable address discovery'),
-      default: false,
-    }),
-    external_ip: Value.list(
-      List.text(
-        { name: i18n('Advertised IP or onion addresses'), default: [] },
-        { minLength: 1 },
-      ),
-    ),
-  }),
+      disabled:
+        (prefill?.outgoingRouting ??
+          (await storeJson.read().once())?.outgoingRouting ??
+          'standard') === 'tor'
+          ? i18n(
+              'I2P is available with Standard routing. Your preference is kept.',
+            )
+          : false,
+    })),
+  })),
   async () => {
-    const value = await nodeConfig.read().once()
-    if (!value) return {}
-    return {
-      listen: value.listen !== '0',
-      max_outbound: value.max_outbound,
-      max_inbound: value.max_inbound,
-      connect: value.connect,
-      seed_node: value.seed_node,
-      no_seeds: value.no_seeds,
-      no_discover: value.no_discover,
-      external_ip: value.external_ip,
-    }
+    const value = await storeJson.read().once()
+    return value
+      ? {
+          outgoingRouting: value.outgoingRouting,
+          i2pEnabled: value.i2pEnabled,
+          acceptIncomingPeers: value.acceptIncomingPeers,
+        }
+      : {}
   },
   async ({ effects, input }) => {
-    await nodeConfig.update(effects, async (current) => {
+    const config = await nodeConfig.read().once()
+    if (!config) throw new Error(i18n('Configuration is not initialized.'))
+    await storeJson.update(effects, (current) => {
       if (!current) throw new Error(i18n('Configuration is not initialized.'))
-      const next: NodeConfig = {
+      const next = {
         ...current,
-        listen: input.listen ? '0.0.0.0:8333' : '0',
-        max_outbound: input.max_outbound,
-        max_inbound: input.max_inbound,
-        connect: input.connect,
-        seed_node: input.seed_node,
-        no_seeds: input.no_seeds,
-        no_discover: input.no_discover,
-        external_ip: input.external_ip,
+        ...input,
+        i2pEnabled:
+          input.outgoingRouting === 'tor'
+            ? current.i2pEnabled
+            : input.i2pEnabled,
       }
-      await validateConfig(next)
+      validateNetworkSettings(config, next)
       return next
     })
     return {

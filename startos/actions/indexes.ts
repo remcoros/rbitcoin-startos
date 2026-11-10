@@ -2,7 +2,7 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { hasPrunedStore, validateConfig } from '../utils'
+import { validateConfig } from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 export const indexes = sdk.Action.withInput(
@@ -16,8 +16,6 @@ export const indexes = sdk.Action.withInput(
     visibility: 'enabled',
   },
   async () => {
-    const config = await nodeConfig.read().once()
-    const pruned = config?.prune_seqsigwit || (await hasPrunedStore())
     return InputSpec.of({
       sh_index: Value.toggle({
         name: i18n('Address history index'),
@@ -31,8 +29,10 @@ export const indexes = sdk.Action.withInput(
       silentPayments: Value.dynamicUnion(() => ({
         name: i18n('Silent Payment index'),
         default: 'disabled',
-        description: i18n('Requires pruning off.'),
-        disabled: pruned ? ['enabled'] : false,
+        disabled: false,
+        description: i18n(
+          'With pruning, enable this before syncing or ensure the index covers all pruned blocks. If it cannot be enabled, check the logs. Disabling it while pruning may prevent re-enabling it later.',
+        ),
         variants: Variants.of({
           disabled: { name: i18n('Disabled'), spec: InputSpec.of({}) },
           enabled: {

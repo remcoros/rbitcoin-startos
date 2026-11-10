@@ -1,10 +1,14 @@
 import { sdk } from './sdk'
 import { i18n } from './i18n'
 import { nodeConfig } from './fileModels/rbitcoin.conf'
+import { storeJson } from './fileModels/store.json'
 import { ports } from './utils'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   const config = await nodeConfig.read().const(effects)
+  const incoming = await storeJson
+    .read((s) => s.acceptIncomingPeers)
+    .const(effects)
   if (!config) return []
   const receipts = []
   for (const item of [
@@ -12,7 +16,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
       id: 'peer',
       name: i18n('P2P'),
       description: i18n('Incoming Bitcoin peer connections.'),
-      enabled: config.listen !== '0' && config.max_inbound > 0,
+      enabled: !!incoming && config.max_inbound > 0,
       port: ports.peer,
       external: ports.peer,
       kind: 'p2p',

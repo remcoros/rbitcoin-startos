@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { sdk } from './sdk'
-import { checkApi } from './health'
+import { resolveNetworking } from './networking'
+import { checkApi, checkPeers, observeInitialSyncPeers } from './health'
 import { i18n } from './i18n'
 import { nodeConfig } from './fileModels/rbitcoin.conf'
 import { storeJson } from './fileModels/store.json'
@@ -13,8 +14,10 @@ import {
   processEnvironment,
   readinessResult,
   readinessMessage,
+  syncProgressMessage,
   runtimeConfig,
   validateConfig,
+  healthReportingEffects,
 } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -55,25 +58,36 @@ export const main = sdk.setupMain(async ({ effects }) => {
           mountpoint: '/startos',
           readonly: false,
         })
-      await sdk.SubContainer.withTemp(
-        effects,
-        { imageId: 'rbitcoin' },
-        mounts,
-        'resync',
-        async (sub) => {
-          await sub.execFail(
-            [
-              'flock',
-              '-n',
-              '/data/datadir/.lock',
-              'sh',
-              '-c',
-              'find /data/datadir -mindepth 1 -maxdepth 1 ! -name .lock -exec rm -rf -- {} + && rm /startos/recovery.request',
-            ],
-            { user: 'root', timeout: null },
-          )
-        },
+      console.info(
+        i18n('Removing old chain data before syncing. This may take a while.'),
       )
+      const cleanupLog = setInterval(() => {
+        console.info(i18n('Still removing old chain data...'))
+      }, 30_000)
+      try {
+        await sdk.SubContainer.withTemp(
+          effects,
+          { imageId: 'rbitcoin' },
+          mounts,
+          'resync',
+          async (sub) => {
+            await sub.execFail(
+              [
+                'flock',
+                '-n',
+                '/data/datadir/.lock',
+                'sh',
+                '-c',
+                'find /data/datadir -mindepth 1 -maxdepth 1 ! -name .lock -exec rm -rf -- {} + && rm /startos/recovery.request',
+              ],
+              { user: 'root', timeout: null },
+            )
+          },
+        )
+        console.info(i18n('Old chain data removed. Starting rbitcoin...'))
+      } finally {
+        clearInterval(cleanupLog)
+      }
     } else if (recovery === 'transaction')
       await fs.rm(`${store}/tx.head`, { recursive: true, force: true })
     else {
@@ -103,6 +117,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   if (config.rpc_listen && (!store.rpcPassword || !store.rpcToken))
     throw new Error(i18n('Generate RPC credentials first.'))
   await validateConfig(config)
+  const network = await resolveNetworking(effects, config, store)
   await fs.mkdir(sdk.volumes.main.path, { recursive: true })
   await fs.chown(sdk.volumes.main.path, 10001, 10001)
   const datadir = sdk.volumes.main.subpath('datadir')
@@ -131,14 +146,35 @@ export const main = sdk.setupMain(async ({ effects }) => {
     mounts,
     'rbitcoin',
   )
-  await sub.writeFile('/etc/rbitcoin.conf', runtimeConfig(config), {
-    mode: 0o600,
-  })
+  await sub.writeFile(
+    '/etc/rbitcoin.conf',
+    runtimeConfig(config, network.config),
+    {
+      mode: 0o600,
+    },
+  )
   await fs.chown(await sub.subpath('/etc/rbitcoin.conf'), 10001, 10001)
 
   let waitingSince: number | null = null
   let previousReason = ''
-  return sdk.Daemons.of(effects)
+  const initialSyncPeers = observeInitialSyncPeers()
+  const healthEffects = healthReportingEffects(effects)
+  return sdk.Daemons.of(healthEffects)
+    .addHealthCheck('peer-routing', {
+      ready: {
+        display: null,
+        fn: () =>
+          network.blocked
+            ? {
+                result: 'failure',
+                message: i18n(
+                  'I2P is unavailable. Waiting for the I2P service; other networks are not permitted by these peer settings.',
+                ),
+              }
+            : { result: 'success' },
+      },
+      requires: [],
+    })
     .addOneshot('nocow', {
       subcontainer: sub,
       exec: {
@@ -160,8 +196,18 @@ export const main = sdk.setupMain(async ({ effects }) => {
     .addDaemon('node', {
       subcontainer: sub,
       exec: {
-        command: sdk.useEntrypoint(nodeArguments(config)),
-        env: processEnvironment(store),
+        fn: async () => {
+          initialSyncPeers.reset()
+          return {
+            command: sdk.useEntrypoint(nodeArguments(config)),
+            env: processEnvironment(store),
+            sigtermTimeout: 300_000,
+            onStderr: (chunk) => {
+              initialSyncPeers.consume(chunk)
+              process.stderr.write(chunk)
+            },
+          }
+        },
         sigtermTimeout: 300_000,
       },
       ready: {
@@ -188,7 +234,36 @@ export const main = sdk.setupMain(async ({ effects }) => {
           }
         },
       },
-      requires: ['nocow'],
+      requires: ['nocow', 'peer-routing'],
+    })
+    .addHealthCheck('peers', {
+      ready: {
+        display: i18n('Peers'),
+        gracePeriod: 300_000,
+        trigger: sdk.trigger.statusTrigger(30_000, {
+          starting: 5_000,
+          failure: 5_000,
+        }),
+        fn: async () => {
+          const result: Awaited<ReturnType<typeof checkPeers>> = network.blocked
+            ? {
+                result: 'failure',
+                message: i18n(
+                  'I2P is unavailable. Waiting for the I2P service; other networks are not permitted by these peer settings.',
+                ),
+              }
+            : await checkPeers(
+                effects,
+                sub,
+                config,
+                store,
+                network.i2pAvailable,
+                initialSyncPeers,
+              )
+          return result
+        },
+      },
+      requires: [],
     })
     .addHealthCheck('rpc', () =>
       config.rpc_listen
@@ -301,6 +376,29 @@ export const main = sdk.setupMain(async ({ effects }) => {
                 }
               } catch {
                 /* fall back to readiness reason */
+              }
+              if (
+                /^(?:not ready: )?(catch-up|initial block download)$/.test(
+                  body.trim(),
+                )
+              ) {
+                try {
+                  const { stdout } = await sub.execFail(
+                    [
+                      'rbitcoin-cli',
+                      '--rpc-socket',
+                      '/data/datadir/rpc.sock',
+                      'getblockchaininfo',
+                    ],
+                    { timeout: 5000 },
+                  )
+                  const message = syncProgressMessage(
+                    JSON.parse(stdout.toString()),
+                  )
+                  if (message) return { result: 'loading', message }
+                } catch {
+                  /* Local RPC may not be available during early startup. */
+                }
               }
               if (reason !== previousReason) waitingSince = null
               previousReason = reason
