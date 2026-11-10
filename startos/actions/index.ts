@@ -1,4 +1,5 @@
 import { sdk } from '../sdk'
+import { rebuildAddress, rebuildTransaction, resync } from './recovery'
 import { indexes } from './indexes'
 import { storage } from './storage'
 import { peers } from './peers'
@@ -26,3 +27,6 @@ export const actions = sdk.Actions.of()
   .addAction(mempool)
   .addAction(performance)
   .addAction(logging)
+  .addAction(rebuildAddress)
+  .addAction(rebuildTransaction)
+  .addAction(resync)

@@ -2,7 +2,7 @@ import { NodeConfig } from '../fileModels/rbitcoin.conf'
 import { sdk } from '../sdk'
 import { i18n } from '../i18n'
 import { nodeConfig } from '../fileModels/rbitcoin.conf'
-import { exists, validateConfig } from '../utils'
+import { hasPrunedStore, validateConfig } from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 export const indexes = sdk.Action.withInput(
@@ -17,9 +17,7 @@ export const indexes = sdk.Action.withInput(
   },
   async () => {
     const config = await nodeConfig.read().once()
-    const pruned =
-      config?.prune_seqsigwit ||
-      (await exists(sdk.volumes.main.subpath('datadir/store/seqsigwit.prune')))
+    const pruned = config?.prune_seqsigwit || (await hasPrunedStore())
     return InputSpec.of({
       sh_index: Value.toggle({
         name: i18n('Address history index'),

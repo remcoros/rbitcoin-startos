@@ -55,6 +55,27 @@ outbound connections through that tunnel too, or configure a suitable outbound p
 Otherwise the peers it contacts can see your home IP. A tunnel used only to obtain
 an incoming port does not require this privacy change.
 
+## Recovery
+
+Recovery actions are under **Recovery**, after the other action groups.
+
+Use **Rebuild address history** when the address history index is damaged. Use
+**Rebuild transaction lookup** when that index is damaged. The node restarts if
+running; otherwise the rebuild starts the next time you start it. The **Readiness**
+check shows rebuild progress when available. Address history must be enabled to
+rebuild it. The node and wallet APIs may be unavailable while rebuilding.
+
+Use **Resync from scratch** as a last resort. It stops the service and schedules
+deletion of its chain data, indexes, peer list, mempool, and API log. Settings and
+RPC credentials remain. Choose pruning and index settings before starting the
+service again. The data is deleted and disk space reclaimed at the next start,
+before the new sync begins. If stopping cannot be confirmed, the reset may still
+run on the next start; check the service status and logs before starting. The
+initial sync can take days and requires substantial disk space.
+
+Each enabled API has its own health check. The Stratum v2 check shows whether
+its port is listening; it does not check template delivery.
+
 ## Limitations
 
 Pruning permanently deletes script and witness data older than 288 blocks. Once it

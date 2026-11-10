@@ -9,6 +9,25 @@ import {
 } from './fileModels/rbitcoin.conf'
 import { Store } from './fileModels/store.json'
 
+export const recoveryRequest = sdk.volumes.startos.subpath('recovery.request')
+
+export async function pendingRecovery(): Promise<string | null> {
+  try {
+    return await fs.readlink(recoveryRequest)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+      return null
+    throw error
+  }
+}
+
+export async function hasPrunedStore(): Promise<boolean> {
+  return (
+    (await pendingRecovery()) !== 'resync' &&
+    (await exists(sdk.volumes.main.subpath('datadir/store/seqsigwit.prune')))
+  )
+}
+
 export const ports = {
   peer: 8333,
   rpc: 8332,
@@ -128,10 +147,7 @@ export async function validateConfig(next: NodeConfig): Promise<void> {
   }
   if (next.prune_seqsigwit && next.sp_tweaks)
     throw new Error(i18n('Silent Payments requires unpruned data.'))
-  if (
-    (!next.prune_seqsigwit || next.sp_tweaks) &&
-    (await exists(sdk.volumes.main.subpath('datadir/store/seqsigwit.prune')))
-  )
+  if ((!next.prune_seqsigwit || next.sp_tweaks) && (await hasPrunedStore()))
     throw new Error(
       i18n('This store is pruned. Keep pruning on and Silent Payments off.'),
     )

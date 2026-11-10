@@ -127,8 +127,8 @@ with owner-only permissions. The fixed Basic username is `rbitcoin`.
 ## Actions
 
 Actions are grouped into **Chain and storage**, **Peers and privacy**, **Clients and
-mining**, and **Policy and performance**. Logging is grouped with policy and performance. StartOS
-determines their display order; numeric prefixes are not used. Configuration changes
+mining**, and **Policy and performance**. Recovery actions are in the **Recovery** group after the other package action groups. Logging is grouped with policy and performance.
+StartOS determines their display order; numeric prefixes are not used. Configuration changes
 restart a running node and are safe to repeat with the same values, except that enabling pruning can
 permanently remove historical witness data and enabling indexes can require
 substantial work.
@@ -158,6 +158,27 @@ A critical task points to `set-rpc-credentials` whenever TCP RPC is enabled and 
 stored credential is missing. Generating credentials or disabling TCP RPC clears the
 condition. Optional client APIs do not force credential setup when they are disabled.
 
+## Recovery
+
+**Resync from scratch** schedules a reset and stops the service. Settings and RPC
+credentials remain; choose settings before starting again. At the next start,
+the package deletes the chain, indexes, peers, mempool and API log before
+launching the node. Disk space is reclaimed then. If the stop request fails,
+the action warns that the reset was scheduled and may still run on the next
+start; check service status and logs before starting. If deletion fails or is
+interrupted, the request remains and the next start retries it. Restore clears
+the pending request, so restoring a backup does not replay the reset. If a
+restored archive is pruned but the pending settings required unpruned data,
+restore re-enables pruning and disables Silent Payments, then prompts the user
+to review storage settings.
+
+**Rebuild address history** and **Rebuild transaction lookup** queue an offline
+index removal and restart a running service. A stopped service processes the
+request on its next start. The request is kept until removal succeeds, then the
+node rebuilds the index from the retained archive. Address history must be
+enabled for its rebuild. Rebuilds can take hours and extra disk space. An
+interrupted rebuild resumes using rbitcoin's normal recovery behavior.
+
 ## Health Checks
 
 Process liveness and client readiness are checked independently. Both probes
@@ -171,7 +192,12 @@ use the health listener, which upstream starts before opening the store.
   a stale tip, block/index lag, or busy probes. Unknown reasons use **Not ready**.
   Busy, stale-tip, or unknown readiness reasons persisting for five minutes report failure with a peer/log recovery hint. A changed reason resets that grace period. Other HTTP failures or connection errors report failure.
 
-The checks inspect HTTP status codes; a generic any-response probe is insufficient.
+Enabled JSON-RPC, Core REST, Electrum, Esplora, metrics, and Stratum v2 each
+have a separate check; disabled interfaces have no check. The first five use
+API requests. Stratum checks only that its TCP listener accepts connections;
+it does not verify a Noise handshake or template delivery. The readiness check
+shows upstream rebuild stages and percentages when available. A responsive API
+can be available before the node is fully synchronized.
 
 ## Backups and Restore
 
