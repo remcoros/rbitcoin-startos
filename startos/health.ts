@@ -215,13 +215,14 @@ export async function checkPeers(
   initialSyncPeers: ReturnType<typeof observeInitialSyncPeers>,
 ) {
   let ready: Response
+  let reason = ''
   try {
     // The RPC snapshot excludes fast IBD peers. Check its scope before using it.
     ready = await fetch(`http://127.0.0.1:${ports.health}/readyz`, {
       signal: timeout(),
     })
     if (ready.status === 503) {
-      const reason = (await ready.text()).trim().replace(/^not ready: /, '')
+      reason = (await ready.text()).trim().replace(/^not ready: /, '')
       if (['opening', 'starting', 'stopping'].includes(reason))
         return {
           result: 'starting' as const,
@@ -236,10 +237,16 @@ export async function checkPeers(
         const count = initialSyncPeers.count()
         if (count === null)
           return {
-            result: 'failure' as const,
+            result: 'starting' as const,
+            waiting: true,
             message: i18n('Unable to read initial sync peer count'),
           }
-        if (count === 0) return await noOutgoingPeers(effects, config, prefs)
+        if (count === 0)
+          return {
+            result: 'starting' as const,
+            waiting: true,
+            message: i18n('Connecting to peers'),
+          }
         return {
           result: 'success' as const,
           message: i18n('${outgoing} outgoing peers for initial sync', {
@@ -267,7 +274,18 @@ export async function checkPeers(
       throw new Error('invalid peer info')
     const incoming = peers.filter((p) => p.inbound).length
     const outgoing = peers.length - incoming
-    if (outgoing === 0) return await noOutgoingPeers(effects, config, prefs)
+    if (outgoing === 0) {
+      if (reason === 'indexing' || reason === 'initial block download')
+        return {
+          result: 'starting' as const,
+          waiting: true,
+          message:
+            reason === 'indexing'
+              ? i18n('Waiting for indexing to finish')
+              : i18n('Connecting to peers'),
+        }
+      return await noOutgoingPeers(effects, config, prefs)
+    }
     const counts = i18n('${incoming} incoming, ${outgoing} outgoing peers', {
       incoming,
       outgoing,
@@ -282,6 +300,12 @@ export async function checkPeers(
           : counts,
     }
   } catch {
+    if (reason === 'indexing')
+      return {
+        result: 'starting' as const,
+        waiting: true,
+        message: i18n('Waiting for indexing to finish'),
+      }
     return {
       result: 'failure' as const,
       message: i18n('Unable to read peer connections. Check the logs.'),

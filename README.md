@@ -32,8 +32,8 @@ published upstream release image, pinned by its multi-platform SHA-256 digest.
 
 The Dockerfile uses a pinned Alpine base with GNU `find` and e2fsprogs `chattr`
 installed through `apk add --no-cache`. It copies the node and CLI from the published
-`ghcr.io/rbitcoin-org/rbitcoin:0.9.1` image, pinned to multi-platform digest
-`sha256:07ba41581f0c8f4c98a4b35c1106c61fe1b7c6c2c36cbd8321e7919efaae5207`.
+`ghcr.io/rbitcoin-org/rbitcoin:0.9.2` image, pinned to multi-platform digest
+`sha256:aeaaf8bf0f5b048c3645a3bc7e8c06d5de32ffeef0ff67f02ddcf8607bfaed42`.
 The entrypoint, working directory, and
 non-root UID/GID `10001:10001` are preserved on x86_64 and aarch64.
 
@@ -230,14 +230,16 @@ use the health listener, which upstream starts before opening the store.
   responding or reports unhealthy; inspect the service logs.
 - `peers`: stays visible during initial sync and normal operation. During IBD it
   reads the current node's INFO progress log: a positive count reports outgoing
-  sync peers, zero reports a connection failure, and a missing or 30-second-old
-  sample reports unavailable telemetry. The latest count is the IBD coordinator's
+  sync peers, zero reports that it is connecting, and a missing or 30-second-old
+  sample reports unavailable telemetry while waiting. The latest count is the IBD coordinator's
   sampled alive-slot count; a stuck coordinator can leave that count stale even
   while the status thread keeps logging. Observations reset on every node process
   start, and captured stderr is forwarded unchanged. With log level warn, error,
   or off, this reporting check is disabled during IBD with an explanation; P2P
   networking remains enabled. After IBD it uses the private RPC socket for actual
-  incoming/outgoing counts. Like Bitcoin, it has a five-minute startup grace:
+  incoming/outgoing counts. During the indexing transition and while the node
+  reports initial block download, zero outgoing peers remains a waiting state.
+  After startup and IBD, zero reports a connection failure. Like Bitcoin, it has a five-minute startup grace:
   positive counts pass immediately, while failures show Starting during grace.
   It polls every 30 seconds normally and every five seconds when starting or
   failing. Missing required Tor and unavailable optional I2P receive explanations.
@@ -250,7 +252,9 @@ use the health listener, which upstream starts before opening the store.
   Busy, stale-tip, or unknown readiness reasons persisting for five minutes report failure with a peer/log recovery hint. A changed reason resets that grace period. Other HTTP failures or connection errors report failure.
 
 Enabled JSON-RPC, Core REST, Electrum, Esplora, metrics, and Stratum v2 each
-have a separate check; disabled interfaces have no check. The first five use
+have a separate check; disabled interfaces have no check. These checks run first
+after 30 seconds, then every 30 seconds while starting, waiting, or failing and
+every 60 seconds while healthy. The first five use
 API requests. Stratum checks only that its TCP listener accepts connections;
 it does not verify a Noise handshake or template delivery. The readiness check
 shows upstream rebuild stages and percentages when available. A responsive API
@@ -313,7 +317,7 @@ manifest remain the authority for defaults and image selection.
 ```yaml
 package_id: rbitcoin
 image: rbitcoin
-upstream_image: ghcr.io/rbitcoin-org/rbitcoin:0.9.1@sha256:07ba41581f0c8f4c98a4b35c1106c61fe1b7c6c2c36cbd8321e7919efaae5207
+upstream_image: ghcr.io/rbitcoin-org/rbitcoin:0.9.2@sha256:aeaaf8bf0f5b048c3645a3bc7e8c06d5de32ffeef0ff67f02ddcf8607bfaed42
 architectures: [x86_64, aarch64]
 subcontainers: [rbitcoin]
 volumes:

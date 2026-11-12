@@ -72,8 +72,9 @@ selection does not restrict manually specified peers or incoming connections.
 
 The **Peers** health check stays visible while syncing. During initial sync it
 shows outgoing sync peers; afterward it shows incoming and outgoing counts. A
-positive outgoing count gets a green check. The check allows five minutes for
-startup before warning about missing connections or unavailable peer counts.
+positive outgoing count gets a green check. During startup and initial sync, it
+waits for connections or a peer count. Afterward, the check warns if outgoing
+connections are missing, with a five-minute startup grace period.
 IBD peer reporting needs log level **info**, **debug**, or **trace**. Other levels
 disable that reporting until initial sync finishes; networking keeps running.
 A clock on an API check means that API is waiting for the node to finish starting
@@ -140,7 +141,7 @@ full node data.
 
 ## Documentation
 
-- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
-- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
-- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/rpc.md) — supported methods and authentication.
-- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/COMPAT.md) — supported wallet and API behavior.
+- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
+- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
+- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/rpc.md) — supported methods and authentication.
+- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/COMPAT.md) — supported wallet and API behavior.

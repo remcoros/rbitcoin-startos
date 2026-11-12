@@ -2,6 +2,7 @@ import { LangDict } from './default'
 
 export default {
   es_ES: {
+    351: 'Esperando a que termine la indexación',
     346: 'Conectando con pares',
     347: 'Los informes de pares de la sincronización inicial requieren registros de nivel info',
     348: 'No se puede leer el número de pares de la sincronización inicial',
@@ -285,6 +286,7 @@ export default {
     '207': 'Lecturas de disco API simultáneas (0: automático)',
   },
   de_DE: {
+    351: 'Warten auf den Abschluss der Indizierung',
     346: 'Verbindung zu Peers wird hergestellt',
     347: 'Peer-Anzeige während der Erstsynchronisierung benötigt die Protokollstufe info',
     348: 'Peer-Anzahl der Erstsynchronisierung kann nicht gelesen werden',
@@ -564,6 +566,7 @@ export default {
     '207': 'Gleichzeitige API-Datenträgerzugriffe (0: automatisch)',
   },
   pl_PL: {
+    351: 'Oczekiwanie na zakończenie indeksowania',
     346: 'Łączenie z węzłami',
     347: 'Raportowanie węzłów podczas synchronizacji początkowej wymaga poziomu logów info',
     348: 'Nie można odczytać liczby węzłów synchronizacji początkowej',
@@ -841,6 +844,7 @@ export default {
     '207': 'Równoczesne odczyty API z dysku (0: automatycznie)',
   },
   fr_FR: {
+    351: 'En attente de la fin de l’indexation',
     346: 'Connexion aux pairs',
     347: 'Le suivi des pairs pendant la synchronisation initiale nécessite le niveau de journalisation info',
     348: 'Impossible de lire le nombre de pairs de la synchronisation initiale',
