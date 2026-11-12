@@ -32,8 +32,8 @@ published upstream release image, pinned by its multi-platform SHA-256 digest.
 
 The Dockerfile uses a pinned Alpine base with GNU `find` and e2fsprogs `chattr`
 installed through `apk add --no-cache`. It copies the node and CLI from the published
-`ghcr.io/rbitcoin-org/rbitcoin:0.9.1` image, pinned to multi-platform digest
-`sha256:07ba41581f0c8f4c98a4b35c1106c61fe1b7c6c2c36cbd8321e7919efaae5207`.
+`ghcr.io/rbitcoin-org/rbitcoin:0.9.2` image, pinned to multi-platform digest
+`sha256:aeaaf8bf0f5b048c3645a3bc7e8c06d5de32ffeef0ff67f02ddcf8607bfaed42`.
 The entrypoint, working directory, and
 non-root UID/GID `10001:10001` are preserved on x86_64 and aarch64.
 
@@ -317,7 +317,7 @@ manifest remain the authority for defaults and image selection.
 ```yaml
 package_id: rbitcoin
 image: rbitcoin
-upstream_image: ghcr.io/rbitcoin-org/rbitcoin:0.9.1@sha256:07ba41581f0c8f4c98a4b35c1106c61fe1b7c6c2c36cbd8321e7919efaae5207
+upstream_image: ghcr.io/rbitcoin-org/rbitcoin:0.9.2@sha256:aeaaf8bf0f5b048c3645a3bc7e8c06d5de32ffeef0ff67f02ddcf8607bfaed42
 architectures: [x86_64, aarch64]
 subcontainers: [rbitcoin]
 volumes:

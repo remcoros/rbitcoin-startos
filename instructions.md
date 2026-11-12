@@ -141,7 +141,7 @@ full node data.
 
 ## Documentation
 
-- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
-- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
-- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/docs/rpc.md) — supported methods and authentication.
-- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.1/COMPAT.md) — supported wallet and API behavior.
+- [Node operations](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/operator/operations.md) — configuration options, synchronization, health, and progress.
+- [Storage and indexes](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/operator/storage.md) — disk I/O, index behavior, and pruning.
+- [RPC reference](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/docs/rpc.md) — supported methods and authentication.
+- [Client compatibility](https://github.com/rbitcoin-org/rbitcoin/blob/v0.9.2/COMPAT.md) — supported wallet and API behavior.
