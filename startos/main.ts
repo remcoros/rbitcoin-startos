@@ -159,6 +159,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
   let previousReason = ''
   const initialSyncPeers = observeInitialSyncPeers()
   const healthEffects = healthReportingEffects(effects)
+  const apiHealthTrigger = sdk.trigger.statusTrigger(30_000, {
+    success: 60_000,
+  })
   return sdk.Daemons.of(healthEffects)
     .addHealthCheck('peer-routing', {
       ready: {
@@ -270,6 +273,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('JSON-RPC'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('rpc', store.rpcPassword),
             },
             requires: ['node'],
@@ -281,6 +285,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('Core REST'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('rest', null),
             },
             requires: ['node'],
@@ -292,6 +297,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('Electrum'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('electrum', null),
             },
             requires: ['node'],
@@ -303,6 +309,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('Esplora'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('esplora', null),
             },
             requires: ['node'],
@@ -314,6 +321,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('Stratum v2'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('sv2', null),
             },
             requires: ['node'],
@@ -325,6 +333,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         ? {
             ready: {
               display: i18n('Prometheus metrics'),
+              trigger: apiHealthTrigger,
               fn: () => checkApi('metrics', null),
             },
             requires: ['node'],

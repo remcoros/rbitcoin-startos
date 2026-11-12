@@ -1,6 +1,7 @@
 export const DEFAULT_LANG = 'en_US'
 
 const dict = {
+  'Waiting for indexing to finish': 351,
   'Connecting to peers': 346,
   'Initial sync peer reporting requires Info logging': 347,
   'Unable to read initial sync peer count': 348,
