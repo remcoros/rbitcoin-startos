@@ -184,7 +184,20 @@ export function runtimeConfig(
       Object.hasOwn(configShape.shape, key),
     ),
   )
-  return serializeConfig({ ...configShape.parse(supported), ...network })
+  return serializeConfig({
+    ...configShape.parse(supported),
+    ...network,
+    net_permission: config.net_permission.flatMap((grant) => {
+      const value = grant.trim()
+      const targetStart = value.indexOf('@') + 1
+      const [address, prefix] = value.slice(targetStart).split('/')
+      const host = address.replace(/^[\[\]]+|[\[\]]+$/g, '')
+      if (isIP(host) !== 4) return [grant]
+      // Linux passes IPv4 peers as mapped IPv6 addresses on the dual-stack listener.
+      const mapped = `::ffff:${host}/${96 + Number(prefix ?? 32)}`
+      return [grant, `${value.slice(0, targetStart)}${mapped}`]
+    }),
+  })
 }
 
 export function nodeArguments(config: NodeConfig): string[] {

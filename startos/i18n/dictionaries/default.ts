@@ -1,6 +1,8 @@
 export const DEFAULT_LANG = 'en_US'
 
 const dict = {
+  'Advertise public IP addresses with an onion': 352,
+  'When you publish a P2P onion address, enabling this lets peers connecting through it learn your public IP and port. With this off, peers that already know your public address can still connect. Clearnet-only nodes advertise their public addresses as usual.': 353,
   'Waiting for indexing to finish': 351,
   'Connecting to peers': 346,
   'Initial sync peer reporting requires Info logging': 347,
@@ -45,7 +47,6 @@ const dict = {
   '${peers}. I2P is unavailable.': 338,
   'Unable to read peer connections. Check the logs.': 339,
   'Choose IPv4, IPv6, Tor, or I2P for automatic peer connections.': 340,
-  'A published P2P address cannot be announced because its external port is not 8333 or it uses TLS. Review the P2P interface addresses in StartOS.': 341,
   '${blocks} blocks behind': 170,
   'Incoming P2P': 12,
   'Add a permission alongside in or out.': 181,

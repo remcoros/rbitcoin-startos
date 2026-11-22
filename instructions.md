@@ -57,11 +57,17 @@ Use **Peer Settings** to choose how rbitcoin connects:
   the I2P service; rbitcoin configures the connection automatically. I2P starts
   disabled. Its preference is kept while using Through Tor. Activating or
   restoring I2P may restart rbitcoin. Incoming I2P is not supported.
-- **Accept incoming peer connections** lets other nodes reach yours. Publish
-  addresses through the **P2P** interface in StartOS. A published onion can be
-  shared with other operators, but this version does not automatically announce
-  externally managed onions to Bitcoin peers. Public IP advertisements require
-  external port 8333; a task explains incompatible published addresses.
+- **Accept incoming peer connections** lets other nodes reach yours. Enable a
+  public IP in **Interfaces > P2P** and forward the port shown there on your
+  gateway. If you only publish clearnet addresses, rbitcoin advertises them
+  with that port.
+- **Advertise public IP addresses with an onion** is off by default. Turn it on
+  to announce your public IPv4 and IPv6 addresses while an onion is published.
+  Peers connecting through the onion may then learn your public IP and port.
+  Direct peers that already know your public address can connect in either case.
+- For incoming peers over Tor, install and start **Tor**. Under **Interfaces >
+  P2P**, use **Add Onion Service** in the **Tor** section. Copy or remove the
+  address from that same section.
 
 Use **Advanced Peer Settings** for automatic peer networks, connection limits,
 and **Manual peers**. A local node can improve initial sync. Include its port,

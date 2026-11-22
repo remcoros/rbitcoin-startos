@@ -12,6 +12,8 @@
 3. Update the immutable upstream `FROM` reference in `Dockerfile` and the
    upstream part of `version` in `startos/versions/current.ts`. Keep one version file
    unless the current version contains a real migration. Write localized release notes.
+   For 0.10, replace the temporary Rust build stage with the official pinned image
+   after verifying it supports port-qualified public P2P addresses.
 4. Compare upstream `NodeConfig::default`, `apply_kv`, `validate`, and its environment
    inventory with `startos/fileModels/`, actions, `utils.ts`, and interface ports. Preserve
    upstream defaults; separately justify any StartOS-specific override. Audit new APIs

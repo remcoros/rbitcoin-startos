@@ -2,6 +2,8 @@ import { LangDict } from './default'
 
 export default {
   es_ES: {
+    352: 'Anunciar direcciones IP públicas junto con una dirección onion',
+    353: 'Cuando publiques una dirección onion para P2P, esta opción permite que los pares que se conecten a ella conozcan tu IP pública y tu puerto. Si la desactivas, los pares que ya conozcan tu dirección pública aún podrán conectarse. Los nodos que solo usan la red pública anuncian sus direcciones como siempre.',
     351: 'Esperando a que termine la indexación',
     346: 'Conectando con pares',
     347: 'Los informes de pares de la sincronización inicial requieren registros de nivel info',
@@ -46,7 +48,6 @@ export default {
     338: '${peers}. I2P no está disponible.',
     339: 'No se pueden consultar las conexiones con pares. Revisa los registros.',
     340: 'Elige IPv4, IPv6, Tor o I2P para las conexiones automáticas con pares.',
-    341: 'No se puede anunciar una dirección P2P publicada porque su puerto externo no es 8333 o usa TLS. Revisa las direcciones de la interfaz P2P en StartOS.',
     306: 'Sincronizando... ${percent}% (${blocks} / ${headers} bloques)',
     303: 'Eliminando los datos antiguos de la cadena antes de sincronizar. Esto puede tardar.',
     304: 'Todavía se están eliminando los datos antiguos de la cadena...',
@@ -286,6 +287,8 @@ export default {
     '207': 'Lecturas de disco API simultáneas (0: automático)',
   },
   de_DE: {
+    352: 'Öffentliche IP-Adressen zusammen mit einer Onion-Adresse ankündigen',
+    353: 'Wenn du eine P2P-Onion-Adresse veröffentlichst, können Peers über diese Adresse bei aktivierter Option deine öffentliche IP-Adresse und deinen Port erfahren. Auch bei deaktivierter Option können sich Peers verbinden, die deine öffentliche Adresse bereits kennen. Knoten, die nur das Clearnet nutzen, kündigen ihre öffentlichen Adressen wie gewohnt an.',
     351: 'Warten auf den Abschluss der Indizierung',
     346: 'Verbindung zu Peers wird hergestellt',
     347: 'Peer-Anzeige während der Erstsynchronisierung benötigt die Protokollstufe info',
@@ -330,7 +333,6 @@ export default {
     338: '${peers}. I2P ist nicht verfügbar.',
     339: 'Peer-Verbindungen können nicht gelesen werden. Prüfe die Protokolle.',
     340: 'Wähle IPv4, IPv6, Tor oder I2P für automatische Peer-Verbindungen.',
-    341: 'Eine veröffentlichte P2P-Adresse kann nicht angekündigt werden, weil ihr externer Port nicht 8333 ist oder sie TLS nutzt. Prüfe die P2P-Adressen in StartOS.',
     306: 'Synchronisierung läuft... ${percent}% (${blocks} / ${headers} Blöcke)',
     303: 'Alte Blockchain-Daten werden vor der Synchronisierung gelöscht. Dies kann dauern.',
     304: 'Alte Blockchain-Daten werden weiterhin gelöscht...',
@@ -566,6 +568,8 @@ export default {
     '207': 'Gleichzeitige API-Datenträgerzugriffe (0: automatisch)',
   },
   pl_PL: {
+    352: 'Ogłaszaj publiczne adresy IP razem z adresem onion',
+    353: 'Gdy udostępnisz adres onion dla połączeń P2P, włączenie tej opcji pozwoli węzłom łączącym się przez ten adres poznać Twój publiczny adres IP i port. Po wyłączeniu opcji węzły, które znają już Twój publiczny adres, nadal mogą się połączyć. Węzły korzystające wyłącznie z sieci publicznej ogłaszają swoje adresy jak zwykle.',
     351: 'Oczekiwanie na zakończenie indeksowania',
     346: 'Łączenie z węzłami',
     347: 'Raportowanie węzłów podczas synchronizacji początkowej wymaga poziomu logów info',
@@ -610,7 +614,6 @@ export default {
     338: '${peers}. I2P jest niedostępne.',
     339: 'Nie można odczytać połączeń peerów. Sprawdź logi.',
     340: 'Wybierz IPv4, IPv6, Tor lub I2P dla automatycznych połączeń z peerami.',
-    341: 'Nie można ogłosić opublikowanego adresu P2P, ponieważ port zewnętrzny nie jest równy 8333 lub używa TLS. Sprawdź adresy interfejsu P2P w StartOS.',
     306: 'Synchronizacja... ${percent}% (${blocks} / ${headers} bloków)',
     303: 'Usuwanie starych danych łańcucha przed synchronizacją. Może to chwilę potrwać.',
     304: 'Trwa usuwanie starych danych łańcucha...',
@@ -844,6 +847,8 @@ export default {
     '207': 'Równoczesne odczyty API z dysku (0: automatycznie)',
   },
   fr_FR: {
+    352: 'Annoncer les adresses IP publiques avec une adresse onion',
+    353: 'Si vous publiez une adresse onion pour le P2P, cette option permet aux pairs qui s’y connectent de connaître votre adresse IP publique et votre port. Si elle est désactivée, les pairs qui connaissent déjà votre adresse publique peuvent toujours se connecter. Les nœuds qui utilisent uniquement le réseau public annoncent leurs adresses comme d’habitude.',
     351: 'En attente de la fin de l’indexation',
     346: 'Connexion aux pairs',
     347: 'Le suivi des pairs pendant la synchronisation initiale nécessite le niveau de journalisation info',
@@ -888,7 +893,6 @@ export default {
     338: '${peers}. I2P est indisponible.',
     339: 'Impossible de lire les connexions avec les pairs. Consultez les journaux.',
     340: 'Choisissez IPv4, IPv6, Tor ou I2P pour les connexions automatiques avec les pairs.',
-    341: 'Une adresse P2P publiée ne peut pas être annoncée car son port externe n’est pas 8333 ou elle utilise TLS. Vérifiez les adresses de l’interface P2P dans StartOS.',
     306: 'Synchronisation... ${percent}% (${blocks} / ${headers} blocs)',
     303: 'Suppression des anciennes données de chaîne avant la synchronisation. Cela peut prendre du temps.',
     304: 'Suppression des anciennes données de chaîne en cours...',

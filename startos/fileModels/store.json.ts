@@ -5,6 +5,7 @@ export const storeShape = z.looseObject({
   outgoingRouting: z.enum(['standard', 'tor']).default('standard'),
   i2pEnabled: z.boolean().default(false),
   acceptIncomingPeers: z.boolean().default(true),
+  advertisePublicIpsWithOnion: z.boolean().catch(false),
   rpcPassword: z.string().nullable().catch(null),
   rpcToken: z.string().nullable().catch(null),
   ioBackend: z.enum(['auto', 'pread', 'uring', 'pool']).catch('auto'),

@@ -10,30 +10,27 @@ import { ports } from './utils'
 
 export function peerPublication(effects: T.Effects) {
   return sdk.host.getOwn(effects, 'peer', (host) => {
-    if (!host)
-      return { ips: [] as string[], incompatiblePort: false, onion: false }
-    const addresses = utils.filledAddress(host, {
-      hostId: 'peer',
-      internalPort: ports.peer,
-      username: null,
-      scheme: null,
-      sslScheme: null,
-      suffix: '',
-    }).public
-    const ips = addresses.filter({ kind: 'ip' }).format('hostname-info')
+    if (!host?.bindings[ports.peer]?.enabled)
+      return { ips: [] as string[], onions: [] as string[] }
+    const addresses = utils
+      .filledAddress(host, {
+        hostId: 'peer',
+        internalPort: ports.peer,
+        username: null,
+        scheme: null,
+        sslScheme: null,
+        suffix: '',
+      })
+      .public.filter({ predicate: ({ ssl }) => !ssl })
+    const onions = addresses.filter({
+      predicate: ({ hostname, metadata }) =>
+        metadata.kind === 'plugin' &&
+        metadata.packageId === 'tor' &&
+        hostname.endsWith('.onion'),
+    })
     return {
-      ips: [
-        ...new Set(
-          ips
-            .filter((a) => a.port === ports.peer && !a.ssl)
-            .map((a) => a.hostname),
-        ),
-      ].sort(),
-      incompatiblePort: ips.some((a) => a.port !== ports.peer || a.ssl),
-      onion: addresses
-        .filter({ pluginId: 'tor' })
-        .format('hostname-info')
-        .some((a) => a.hostname.endsWith('.onion')),
+      ips: [...new Set(addresses.filter({ kind: 'ip' }).format())].sort(),
+      onions: [...new Set(onions.format())].sort(),
     }
   })
 }
@@ -127,7 +124,7 @@ export function managedNetworkConfig(
   prefs: Store,
   torAddress: string,
   samAddress: string | null,
-  publishedIps: string[],
+  externalEndpoints: string[],
 ) {
   const i2p =
     prefs.outgoingRouting === 'standard' && prefs.i2pEnabled ? samAddress : null
@@ -146,7 +143,10 @@ export function managedNetworkConfig(
     blocked,
     config: {
       connect: config.connect.map((p) => p.trim().toLowerCase()),
-      listen: prefs.acceptIncomingPeers ? `[::]:${ports.peer}` : '0',
+      listen:
+        prefs.acceptIncomingPeers && config.max_inbound > 0
+          ? `[::]:${ports.peer}`
+          : '0',
       proxy: prefs.outgoingRouting === 'tor' ? torAddress : null,
       onion: torAddress,
       proxy_randomize: true,
@@ -155,8 +155,7 @@ export function managedNetworkConfig(
       i2p_accept_incoming: false,
       cjdns_reachable: false,
       no_discover: false,
-      external_ip:
-        prefs.acceptIncomingPeers && config.max_inbound > 0 ? publishedIps : [],
+      external_ip: externalEndpoints,
       seed_node: [],
       no_seeds: false,
       listen_onion: false,
@@ -197,17 +196,17 @@ export async function resolveNetworking(
               : null,
         ).const()
       : null
-  // Only actual advertised IPs restart main; onion or unrelated binding churn does not.
-  const published =
+  const externalEndpoints =
     prefs.acceptIncomingPeers && config.max_inbound > 0
-      ? await utils.Watchable.combine(
-          effects,
-          [peerPublication(effects)],
-          ([p]) => p.ips,
-        ).const()
-      : []
+      ? await peerPublication(effects).const()
+      : { ips: [], onions: [] }
+  const advertiseIps =
+    externalEndpoints.onions.length === 0 || prefs.advertisePublicIpsWithOnion
   return {
-    ...managedNetworkConfig(config, prefs, torAddress, samAddress, published),
+    ...managedNetworkConfig(config, prefs, torAddress, samAddress, [
+      ...externalEndpoints.onions,
+      ...(advertiseIps ? externalEndpoints.ips : []),
+    ]),
     i2pAvailable: samAddress !== null,
   }
 }

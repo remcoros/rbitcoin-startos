@@ -10,6 +10,8 @@ export const manifest = setupManifest({
   marketingUrl: 'https://github.com/rbitcoin-org/rbitcoin',
   donationUrl: null,
   description: { short, long },
+  // The upgrade migration clears URL rows published by the experimental builds.
+  plugins: ['url-v0'],
   volumes: ['main', 'startos'],
   images: {
     rbitcoin: {

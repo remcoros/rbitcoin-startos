@@ -34,7 +34,7 @@ const tor = sdk.Dependency.optional('tor', {
     return (
       prefs?.routing === 'tor' ||
       !!selected ||
-      (!!prefs?.incoming && !!slots && publication.onion)
+      (!!prefs?.incoming && !!slots && publication.onions.length > 0)
     )
   },
 })

@@ -111,8 +111,9 @@ stops answering its handshake; the package does not patch that behavior.
 
 The package exports interfaces only while their corresponding listeners are enabled.
 It always exports the health interface. Bind addresses and internal ports are fixed;
-preferred external P2P/RPC ports are 8333 and 8332. P2P listens on `[::]:8333`
-for IPv4 and IPv6 clients when incoming connections are enabled.
+preferred external P2P/RPC ports are 8333 and 8332. IPv4, IPv6, and StartOS Tor
+connect to the same P2P listener at `[::]:8333`. It follows the incoming
+connections setting and requires a positive inbound limit.
 
 | Interface ID | Type | Internal port | Transport and availability |
 | --- | --- | --- | --- |
@@ -127,18 +128,27 @@ Peer permission grants use IP addresses or CIDR ranges. Supported names are
 `bloomfilter`/`bloom`, `noban`, `forcerelay`, `mempool`, `download`, `all`, `relay`,
 and `addr`, with optional `in`/`out` directions. Bare IP/CIDR grants retain upstream's
 implicit permissions. Global trust switches and whole-listener grants are not exposed.
+IPv4 grants also match IPv4-mapped sockets on the dual-stack listener. A
+forwarded Tor connection arrives from the StartOS bridge, so avoid granting
+peer permissions to the bridge or to broad ranges that include it.
 
 Core-style REST is an optional unauthenticated path on the RPC listener. Electrum and
 Esplora do not gain authentication from their StartOS interface type. Reachability,
 domains, and onion addresses are selected by the operator per interface.
 
-Peer advertisement is derived from public IP addresses on the `peer` host's P2P
-binding, independently of the exported interface's transient presence. Only
-plaintext addresses with external port 8333 can be announced; mismatched ports
-raise a task. Private IPs and domains are excluded. Removing publication removes
-the runtime advertisement. Onion publication is managed by StartOS, but this
-upstream pin does not self-announce externally managed onions to Bitcoin peers.
-They can still be shared as incoming P2P addresses.
+Peer advertisement uses the enabled plaintext addresses on the P2P binding.
+rbitcoin advertises public IPv4 and IPv6 as usual on a clearnet-only node. While
+a Tor onion is published, rbitcoin supplies its public IP addresses only if
+**Advertise public IP addresses with an onion** is enabled in **Peer Settings**.
+The option defaults to off. Enabling it lets peers that connect through the
+onion learn the node's public endpoint because both routes share one listener.
+Direct peers that know the endpoint can reach it with either setting, and
+outgoing Tor peers can receive an onion announcement.
+
+Add, copy, and remove onions in the **Tor** section of **Interfaces → P2P**.
+The runtime config passes the actual public ports as `external_ip` and
+restarts rbitcoin when the list changes. Tor forwarding and rbitcoin's config
+reload run independently when an onion is attached or removed.
 
 Standard routing uses direct IP connections and the Tor service for onion peers.
 Through Tor sets the general SOCKS proxy as well, preserving SOCKS credential
@@ -175,7 +185,7 @@ substantial work.
 | --- | --- |
 | `indexes` | Address history, compact block filters, then Silent Payment tweaks with a conditional output threshold. With pruning, upstream refuses to enable tweaks if the index does not cover the data already pruned. Disabling tweaks while pruning may prevent re-enabling them later. Each index uses additional storage and may backfill after synchronization. |
 | `storage` | Witness pruning, a conditional cache-size threshold in MiB (encoded input-record bytes, excluding memory overhead), HDD scheduling, and the disk I/O backend. Automatic I/O leaves `RBITCOIN_IO` unset. Pruning and cache fields include help descriptions. Pruning warns before selection; its Disabled option is unavailable after a prune marker exists. With tweaks enabled, upstream refuses pruning if the index does not cover the blocks that would be removed. |
-| `peers` | Peer Settings: Standard/Through Tor routing, saved I2P preference, and incoming P2P. |
+| `peers` | Peer Settings for outgoing routing, I2P, incoming P2P, and public IP announcements alongside an onion. |
 | `peers-advanced` | Automatic peer networks, manual sync/follow peers, and separate incoming/outgoing connection limits. Empty network and manual-peer selections use automatic discovery over available networks. A manual list disables normal automatic discovery, but saved peers may still be used by fast IBD. |
 | `mempool` | Weight budget, expiry, persistence, blocks-only mode, and minimum relay fee. The UI uses MWU, hours, and sat/vB; the relay fee defaults to 0.1 sat/vB. Configuration retains upstream units. |
 | `permissions` | IP/CIDR permission grants for specific peers. An empty list means no grants. |
@@ -194,9 +204,6 @@ Technical protocol names and selectable enum tokens retain their values.
 A critical task points to `set-rpc-credentials` whenever TCP RPC is enabled and either
 stored credential is missing. Generating credentials or disabling TCP RPC clears the
 condition. Optional client APIs do not force credential setup when they are disabled.
-An important task points to Peer Settings when a published P2P IP uses an external
-port other than 8333 or TLS, so it cannot be advertised correctly. The task clears
-when publication is compatible or incoming P2P is disabled.
 
 ## Recovery
 
@@ -293,9 +300,7 @@ operator choice.
   compatibility claim.
 - Native Tor control/publication and inbound I2P forwarding are not offered: upstream
   forwards to the router's loopback, which does not reach this separate container.
-  Use StartOS interface publication and managed outgoing connections instead.
-  Externally published onions are not self-announced by this upstream pin; external
-  P2P ports differing from 8333 cannot be represented in upstream advertisement.
+  Use the StartOS Tor service and managed outgoing connections.
   Manual peers support local IBD sources but are not persistent additive peers
   alongside normal discovery. The package does not change upstream validation.
 - Arbitrary paths/listener ports, shell notification commands, host suspend inhibition,
