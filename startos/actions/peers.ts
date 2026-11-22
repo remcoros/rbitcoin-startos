@@ -31,13 +31,6 @@ export const peers = sdk.Action.withInput(
       ),
       default: true,
     }),
-    advertisePublicIpsWithOnion: Value.toggle({
-      name: i18n('Advertise public IP addresses with an onion'),
-      description: i18n(
-        'When you publish a P2P onion address, enabling this lets peers connecting through it learn your public IP and port. With this off, peers that already know your public address can still connect. Clearnet-only nodes advertise their public addresses as usual.',
-      ),
-      default: false,
-    }),
   }).add(({ Value }) => ({
     i2pEnabled: Value.dynamicToggle(async ({ prefill }) => ({
       name: i18n('I2P connections'),
@@ -62,7 +55,6 @@ export const peers = sdk.Action.withInput(
           outgoingRouting: value.outgoingRouting,
           i2pEnabled: value.i2pEnabled,
           acceptIncomingPeers: value.acceptIncomingPeers,
-          advertisePublicIpsWithOnion: value.advertisePublicIpsWithOnion,
         }
       : {}
   },

@@ -111,9 +111,13 @@ stops answering its handshake; the package does not patch that behavior.
 
 The package exports interfaces only while their corresponding listeners are enabled.
 It always exports the health interface. Bind addresses and internal ports are fixed;
-preferred external P2P/RPC ports are 8333 and 8332. IPv4, IPv6, and StartOS Tor
-connect to the same P2P listener at `[::]:8333`. It follows the incoming
-connections setting and requires a positive inbound limit.
+preferred external P2P/RPC ports are 8333 and 8332. StartOS forwards P2P traffic
+to port 8333. Direct IPv4 and IPv6 traffic reaches the listener at `[::]:8333`.
+A rule in the service network namespace redirects connections from the StartOS
+IPv4 bridge address to a TCP relay. The relay connects from loopback to
+`127.0.0.1:8334=onion`, so rbitcoin can disconnect a misbehaving session without
+discouraging the shared bridge IP. The P2P listeners and relay require incoming
+connections to be enabled and a positive inbound limit.
 
 | Interface ID | Type | Internal port | Transport and availability |
 | --- | --- | --- | --- |
@@ -128,27 +132,22 @@ Peer permission grants use IP addresses or CIDR ranges. Supported names are
 `bloomfilter`/`bloom`, `noban`, `forcerelay`, `mempool`, `download`, `all`, `relay`,
 and `addr`, with optional `in`/`out` directions. Bare IP/CIDR grants retain upstream's
 implicit permissions. Global trust switches and whole-listener grants are not exposed.
-IPv4 grants also match IPv4-mapped sockets on the dual-stack listener. A
-forwarded Tor connection arrives from the StartOS bridge, so avoid granting
-peer permissions to the bridge or to broad ranges that include it.
+IPv4 grants also match IPv4-mapped sockets on the dual-stack listener.
+Connections redirected from the bridge skip source-IP grants.
 
 Core-style REST is an optional unauthenticated path on the RPC listener. Electrum and
 Esplora do not gain authentication from their StartOS interface type. Reachability,
 domains, and onion addresses are selected by the operator per interface.
 
-Peer advertisement uses the enabled plaintext addresses on the P2P binding.
-rbitcoin advertises public IPv4 and IPv6 as usual on a clearnet-only node. While
-a Tor onion is published, rbitcoin supplies its public IP addresses only if
-**Advertise public IP addresses with an onion** is enabled in **Peer Settings**.
-The option defaults to off. Enabling it lets peers that connect through the
-onion learn the node's public endpoint because both routes share one listener.
-Direct peers that know the endpoint can reach it with either setting, and
-outgoing Tor peers can receive an onion announcement.
-
 Add, copy, and remove onions in the **Tor** section of **Interfaces → P2P**.
-The runtime config passes the actual public ports as `external_ip` and
-restarts rbitcoin when the list changes. Tor forwarding and rbitcoin's config
-reload run independently when an onion is attached or removed.
+The runtime config passes enabled plaintext public IPv4, IPv6, and Tor
+endpoints with their actual ports as `external_ip`. Changes to that list
+restart rbitcoin. Eligible direct peers receive a public IP announcement, and
+eligible Tor peers receive an onion announcement. A service that opens a
+connection via the same StartOS IPv4 bridge endpoint reaches the marked listener
+and can receive the onion too. StartOS rewrites both sources to the bridge
+address. The redirect is installed before rbitcoin starts and applies even
+before an onion is published.
 
 Standard routing uses direct IP connections and the Tor service for onion peers.
 Through Tor sets the general SOCKS proxy as well, preserving SOCKS credential
@@ -185,7 +184,7 @@ substantial work.
 | --- | --- |
 | `indexes` | Address history, compact block filters, then Silent Payment tweaks with a conditional output threshold. With pruning, upstream refuses to enable tweaks if the index does not cover the data already pruned. Disabling tweaks while pruning may prevent re-enabling them later. Each index uses additional storage and may backfill after synchronization. |
 | `storage` | Witness pruning, a conditional cache-size threshold in MiB (encoded input-record bytes, excluding memory overhead), HDD scheduling, and the disk I/O backend. Automatic I/O leaves `RBITCOIN_IO` unset. Pruning and cache fields include help descriptions. Pruning warns before selection; its Disabled option is unavailable after a prune marker exists. With tweaks enabled, upstream refuses pruning if the index does not cover the blocks that would be removed. |
-| `peers` | Peer Settings for outgoing routing, I2P, incoming P2P, and public IP announcements alongside an onion. |
+| `peers` | Peer Settings for outgoing routing, I2P, and incoming P2P. |
 | `peers-advanced` | Automatic peer networks, manual sync/follow peers, and separate incoming/outgoing connection limits. Empty network and manual-peer selections use automatic discovery over available networks. A manual list disables normal automatic discovery, but saved peers may still be used by fast IBD. |
 | `mempool` | Weight budget, expiry, persistence, blocks-only mode, and minimum relay fee. The UI uses MWU, hours, and sat/vB; the relay fee defaults to 0.1 sat/vB. Configuration retains upstream units. |
 | `permissions` | IP/CIDR permission grants for specific peers. An empty list means no grants. |
@@ -252,6 +251,9 @@ use the health listener, which upstream starts before opening the store.
   failing. Missing required Tor and unavailable optional I2P receive explanations.
 - `peer-routing`: an internal, hidden startup gate for I2P-only configurations
   without a usable router. The visible Peers check explains the wait.
+- `p2p-relay`: displayed as **P2P relay** when incoming connections are enabled
+  and the inbound limit is positive. It checks whether the relay is listening.
+  If it fails, inspect the service logs for the forwarded connection outage.
 - `synchronization`: checks `/readyz` and is displayed as **Readiness**. HTTP success
   reports client readiness without a redundant success message. HTTP 503 reports
   loading with a translated reason for opening, starting, syncing, indexing, stopping,

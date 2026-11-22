@@ -10,6 +10,7 @@ import {
   recoveryRequest,
   pendingRecovery,
   nodeArguments,
+  peerIngressTable,
   ports,
   processEnvironment,
   readinessResult,
@@ -154,6 +155,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     },
   )
   await fs.chown(await sub.subpath('/etc/rbitcoin.conf'), 10001, 10001)
+  const { peerRelay } = network
+  const ingressRulesPath = '/etc/rbitcoin-peer-ingress.nft'
+  if (peerRelay)
+    await sub.writeFile(ingressRulesPath, peerRelay.ingressRules, {
+      mode: 0o600,
+    })
 
   let waitingSince: number | null = null
   let previousReason = ''
@@ -196,6 +203,39 @@ export const main = sdk.setupMain(async ({ effects }) => {
       },
       requires: [],
     })
+    .addOneshot('p2p-ingress', {
+      subcontainer: sub,
+      exec: {
+        command: peerRelay
+          ? ['nft', '-f', ingressRulesPath]
+          : ['sh', '-c', `nft destroy table ip ${peerIngressTable} || true`],
+        user: 'root',
+      },
+      requires: peerRelay ? ['peer-routing'] : [],
+    })
+    .addDaemon('p2p-relay', () =>
+      peerRelay
+        ? {
+            subcontainer: sub,
+            exec: {
+              command: [
+                'socat',
+                `TCP4-LISTEN:${ports.peerRelay},bind=${peerRelay.ip},reuseaddr,fork,max-children=${Math.min(config.max_inbound, 0x7fff_ffff)}`,
+                `TCP4:127.0.0.1:${ports.peerOnion},bind=127.0.0.1,connect-timeout=5`,
+              ],
+            },
+            ready: {
+              display: i18n('P2P relay'),
+              fn: () =>
+                sdk.healthCheck.checkPortListening(effects, ports.peerRelay, {
+                  successMessage: '',
+                  errorMessage: i18n('Not responding. Check the logs.'),
+                }),
+            },
+            requires: ['p2p-ingress'],
+          }
+        : null,
+    )
     .addDaemon('node', {
       subcontainer: sub,
       exec: {
@@ -237,7 +277,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
           }
         },
       },
-      requires: ['nocow', 'peer-routing'],
+      requires: peerRelay
+        ? ['nocow', 'p2p-ingress']
+        : ['nocow', 'peer-routing'],
     })
     .addHealthCheck('peers', {
       ready: {

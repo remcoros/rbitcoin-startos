@@ -1,8 +1,7 @@
 export const DEFAULT_LANG = 'en_US'
 
 const dict = {
-  'Advertise public IP addresses with an onion': 352,
-  'When you publish a P2P onion address, enabling this lets peers connecting through it learn your public IP and port. With this off, peers that already know your public address can still connect. Clearnet-only nodes advertise their public addresses as usual.': 353,
+  'P2P relay': 354,
   'Waiting for indexing to finish': 351,
   'Connecting to peers': 346,
   'Initial sync peer reporting requires Info logging': 347,

@@ -6,7 +6,7 @@ import { sdk } from './sdk'
 import { i18n } from './i18n'
 import { NodeConfig } from './fileModels/rbitcoin.conf'
 import { Store } from './fileModels/store.json'
-import { ports } from './utils'
+import { peerIngressTable, ports } from './utils'
 
 export function peerPublication(effects: T.Effects) {
   return sdk.host.getOwn(effects, 'peer', (host) => {
@@ -125,6 +125,7 @@ export function managedNetworkConfig(
   torAddress: string,
   samAddress: string | null,
   externalEndpoints: string[],
+  incoming: boolean,
 ) {
   const i2p =
     prefs.outgoingRouting === 'standard' && prefs.i2pEnabled ? samAddress : null
@@ -143,10 +144,9 @@ export function managedNetworkConfig(
     blocked,
     config: {
       connect: config.connect.map((p) => p.trim().toLowerCase()),
-      listen:
-        prefs.acceptIncomingPeers && config.max_inbound > 0
-          ? `[::]:${ports.peer}`
-          : '0',
+      listen: incoming
+        ? [`[::]:${ports.peer}`, `127.0.0.1:${ports.peerOnion}=onion`]
+        : '0',
       proxy: prefs.outgoingRouting === 'tor' ? torAddress : null,
       onion: torAddress,
       proxy_randomize: true,
@@ -161,6 +161,23 @@ export function managedNetworkConfig(
       listen_onion: false,
     },
   }
+}
+
+function peerIngressRules(bridgeIp: string, relayIp: string) {
+  return `destroy table ip ${peerIngressTable}
+table ip ${peerIngressTable} {
+  chain prerouting {
+    type nat hook prerouting priority dstnat; policy accept;
+    ip saddr ${bridgeIp} ip daddr ${relayIp} tcp dport ${ports.peer} dnat to ${relayIp}:${ports.peerRelay}
+  }
+  chain input {
+    type filter hook input priority filter; policy accept;
+    ip saddr ${bridgeIp} ip daddr ${relayIp} tcp dport ${ports.peerRelay} ct original proto-dst ${ports.peer} ct status dnat accept
+    tcp dport ${ports.peerRelay} drop
+    iifname != "lo" tcp dport ${ports.peerOnion} drop
+  }
+}
+`
 }
 
 export async function resolveNetworking(
@@ -196,17 +213,27 @@ export async function resolveNetworking(
               : null,
         ).const()
       : null
-  const externalEndpoints =
-    prefs.acceptIncomingPeers && config.max_inbound > 0
-      ? await peerPublication(effects).const()
-      : { ips: [], onions: [] }
-  const advertiseIps =
-    externalEndpoints.onions.length === 0 || prefs.advertisePublicIpsWithOnion
+  // Route through the marked listener before Tor can attach an onion.
+  const incoming = prefs.acceptIncomingPeers && config.max_inbound > 0
+  const relayIp = incoming ? await sdk.getContainerIp(effects).const() : null
+  const { ips, onions } = incoming
+    ? await peerPublication(effects).const()
+    : { ips: [], onions: [] }
   return {
-    ...managedNetworkConfig(config, prefs, torAddress, samAddress, [
-      ...externalEndpoints.onions,
-      ...(advertiseIps ? externalEndpoints.ips : []),
-    ]),
+    ...managedNetworkConfig(
+      config,
+      prefs,
+      torAddress,
+      samAddress,
+      [...onions, ...ips],
+      relayIp !== null,
+    ),
+    peerRelay: relayIp
+      ? {
+          ip: relayIp,
+          ingressRules: peerIngressRules(await sdk.getOsIp(effects), relayIp),
+        }
+      : null,
     i2pAvailable: samAddress !== null,
   }
 }

@@ -48,12 +48,16 @@ export async function hasPrunedStore(): Promise<boolean> {
 
 export const ports = {
   peer: 8333,
+  peerOnion: 8334,
+  peerRelay: 8335,
   rpc: 8332,
   electrum: 50001,
   esplora: 3000,
   health: 9332,
   sv2: 8442,
 }
+
+export const peerIngressTable = 'rbitcoin_peer_ingress'
 
 export async function exists(path: string): Promise<boolean> {
   try {
