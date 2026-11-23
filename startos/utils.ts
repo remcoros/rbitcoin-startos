@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises'
+import { constants } from 'node:fs'
 import { isIP } from 'node:net'
 import { sdk } from './sdk'
 import { i18n } from './i18n'
@@ -43,6 +44,73 @@ export async function hasPrunedStore(): Promise<boolean> {
   return (
     (await pendingRecovery()) !== 'resync' &&
     (await exists(sdk.volumes.main.subpath('datadir/store/seqsigwit.prune')))
+  )
+}
+
+/**
+ * The volume dependents mount read-only for RPC, so they never see the node's
+ * data directory or Bearer token. Names match bitcoin-core-startos.
+ */
+export const rpcVolumeId = 'public'
+export const rpcCookieName = '.cookie'
+/** `1` when old script and witness data is or will be dropped, otherwise `0`. */
+export const rpcPruneName = 'prune'
+
+/**
+ * Publishes the RPC cookie and prune state for dependents. An unchanged file is
+ * left in place, so a node restart does not make cookie watchers restart too.
+ *
+ * A dependent chooses its own mount flags, so nothing here trusts what is
+ * already on this volume: links are never followed and odd entries are replaced.
+ */
+export async function publishRpc(
+  config: Pick<NodeConfig, 'rpc_listen' | 'prune_seqsigwit'>,
+  store: Pick<Store, 'rpcPassword'>,
+): Promise<void> {
+  await fs.mkdir(sdk.volumes[rpcVolumeId].path, { recursive: true })
+  const isCurrent = async (path: string, data: string, mode: number) => {
+    const file = await fs
+      .open(
+        path,
+        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+      )
+      .catch(() => null)
+    if (!file) return false
+    try {
+      const stat = await file.stat()
+      if (!stat.isFile() || stat.nlink !== 1) return false
+      if ((await file.readFile('utf8')) !== data) return false
+      await file.chmod(mode)
+      return true
+    } finally {
+      await file.close()
+    }
+  }
+  const publish = async (name: string, data: string | null, mode: number) => {
+    const path = sdk.volumes[rpcVolumeId].subpath(name)
+    const tmp = `${path}.tmp`
+    await fs.rm(tmp, { force: true, recursive: true })
+    if (data === null) {
+      await fs.rm(path, { force: true, recursive: true })
+      return
+    }
+    if (await isCurrent(path, data, mode)) return
+    await fs.writeFile(tmp, data, { mode, flag: 'wx' })
+    if ((await fs.lstat(path).catch(() => null))?.isDirectory())
+      await fs.rm(path, { recursive: true })
+    await fs.rename(tmp, path)
+  }
+  await publish(
+    rpcCookieName,
+    config.rpc_listen && store.rpcPassword
+      ? `rbitcoin:${store.rpcPassword}`
+      : null,
+    0o600,
+  )
+  await publish(
+    rpcPruneName,
+    config.prune_seqsigwit || (await hasPrunedStore()) ? '1' : '0',
+    0o644,
   )
 }
 

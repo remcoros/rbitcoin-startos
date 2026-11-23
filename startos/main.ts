@@ -12,6 +12,7 @@ import {
   nodeArguments,
   ports,
   processEnvironment,
+  publishRpc,
   readinessResult,
   readinessMessage,
   syncProgressMessage,
@@ -134,6 +135,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       await fs.chown(path, 10001, 10001)
     }
   }
+  await publishRpc(config, store)
   const mounts = sdk.Mounts.of().mountVolume({
     volumeId: 'main',
     subpath: null,

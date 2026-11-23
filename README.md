@@ -48,15 +48,24 @@ five minutes for archive flushing.
 
 ## Volume and Data Layout
 
-Two persistent volumes separate node data from private package configuration.
+Three volumes separate node data, private package configuration, and the files
+dependent services may read.
 
 | Volume | Container mount | Contents |
 | --- | --- | --- |
 | `main` | `/data` | `datadir/`: archive, indexes, mempool, peer records, RPC secrets, optional API log and AS map |
 | `startos` | Unmounted | `rbitcoin.conf` and `store.json`, protected by a mode `0700` volume root |
+| `public` | Unmounted here; dependents mount it read-only | `.cookie` (`rbitcoin:<password>`, mode `0600`, present only while RPC is enabled) and `prune` (`1` when pruning is on or the store is pruned, otherwise `0`) |
 
 The node always uses mainnet and `/data/datadir`, with all node data in the main
-volume.
+volume. Dependents should mount `public` read-only as a directory rather than `main`:
+the cookie is replaced atomically when credentials change, and the Bearer token is
+never published. The cookie grants full RPC because upstream has no per-client method
+allow-list. It holds the saved RPC password, not a per-start value like Bitcoin Core's
+cookie, so a removed dependent's copy stays valid until **Replace RPC credentials** is
+run. An unchanged cookie is not rewritten when the node restarts. The package checks
+the volume on every start, replaces links or unexpected entries without following
+them, and does not back it up.
 
 Directories on the main data volume receive the Btrfs no-copy-on-write attribute so
 new files inherit it. This does not rewrite existing CoW extents or convert an
@@ -276,10 +285,11 @@ the stored blocks, the check falls back to **Syncing...**.
 
 Backups include configuration, credentials, and the complete node data. The main
 volume uses incremental sync; StartOS stops the service during backup and restores
-both volumes before init merges defaults. No archive is intentionally omitted.
+the `main` and `startos` volumes before init merges defaults. No archive is
+intentionally omitted.
 
 Expect a chain-sized backup and sufficient space on the backup target. The runtime
-conf copy is recreated on startup from the persistent model.
+conf copy and the `public` volume are recreated on startup from the persistent model.
 
 ## Limitations and Differences
 
@@ -323,6 +333,7 @@ subcontainers: [rbitcoin]
 volumes:
   main: /data
   startos: unmounted
+  public: unmounted (dependents mount read-only; .cookie, prune)
 file_models:
   - startos/rbitcoin.conf
   - startos/store.json

@@ -27,7 +27,9 @@ Use the **JSON-RPC** address with HTTP Basic authentication, username `rbitcoin`
 the generated password. For Bearer authentication, send the separate token in the
 `Authorization: Bearer` header. **View RPC credentials** shows the saved credentials.
 **Replace RPC credentials** replaces both secrets and restarts a running node.
-Update every RPC client afterward.
+Update every RPC client afterward. Services that depend on rbitcoin read the same
+password and have full RPC access. After removing one you no longer trust, replace
+the credentials so its copy stops working.
 
 Use **Electrum** for compatible wallets. Use a `tcp://` address for plaintext or an
 `ssl://` address for the StartOS TLS connection. Wallet address history needs the
